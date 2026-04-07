@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import '../styles/Dashboard.css'
 
 function Dashboard() {
-  const navigate = useNavigate()
   const [leaveRequests, setLeaveRequests] = useState([
     { id: 1, type: 'Annual Leave', startDate: '2026-04-10', endDate: '2026-04-15', status: 'Pending' },
     { id: 2, type: 'Sick Leave', startDate: '2026-04-05', endDate: '2026-04-07', status: 'Approved' },
@@ -46,22 +44,8 @@ function Dashboard() {
     return status === 'Approved' ? 'status-approved' : status === 'Rejected' ? 'status-rejected' : 'status-pending'
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('userEmail')
-    localStorage.removeItem('rememberMe')
-    navigate('/')
-  }
-
   return (
     <div className="dashboard-container">
-      {/* Top Navigation */}
-      <nav className="dashboard-navbar">
-        <div className="navbar-content">
-          <h2 className="navbar-brand">HIMUDA Leave Portal</h2>
-          <button className="btn-logout" onClick={handleLogout}>Logout</button>
-        </div>
-      </nav>
-
       {/* Main Container */}
       <div className="container">
         {/* Header */}
