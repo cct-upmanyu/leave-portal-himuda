@@ -3,6 +3,7 @@ import '../styles/Layout.css'
 
 const settingsLinks = [
   { to: '/settings/districts', label: 'Districts' },
+  { to: '/settings/states', label: 'States' },
   { to: '/settings/departments', label: 'Departments' },
   { to: '/settings/leave-types', label: 'Leave Types' },
   { to: '/settings/designations', label: 'Designations' },

@@ -16,6 +16,10 @@ export const leaveTypeApi = createApi({
             ]
           : [{ type: 'LeaveType', id: 'LIST' }],
     }),
+    getLeaveTypeById: builder.query({
+      query: (id) => `/api/leave-types/${id}`,
+      providesTags: (result, error, id) => [{ type: 'LeaveType', id }],
+    }),
     createLeaveType: builder.mutation({
       query: (payload) => ({
         url: '/api/leave-types',
@@ -50,6 +54,7 @@ export const leaveTypeApi = createApi({
 
 export const {
   useGetLeaveTypesQuery,
+  useGetLeaveTypeByIdQuery,
   useCreateLeaveTypeMutation,
   useUpdateLeaveTypeMutation,
   useDeleteLeaveTypeMutation,

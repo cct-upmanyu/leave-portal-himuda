@@ -137,6 +137,15 @@
   gap: 0.9rem;
 }
 
+.leave-type-card-clickable {
+  cursor: pointer;
+}
+
+.leave-type-card-clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+}
+
 .leave-type-top {
   display: flex;
   justify-content: space-between;
@@ -189,6 +198,140 @@
 .leave-type-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.leave-type-detail-page {
+  padding: 1.5rem;
+}
+
+.leave-type-detail-topbar {
+  margin-bottom: 0.75rem;
+}
+
+.leave-type-back-link {
+  border: none;
+  background: transparent;
+  color: #2f6b8f;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.leave-type-tabs {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.leave-type-tab {
+  border: none;
+  background: transparent;
+  padding: 0.65rem 0.1rem 0.75rem;
+  color: #1f2a37;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+
+.leave-type-tab.active {
+  color: #0f172a;
+  border-bottom-color: #3b7696;
+}
+
+.leave-type-detail-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  padding: 1rem;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.leave-type-detail-title {
+  font-size: 1.05rem;
+  color: #1f2a37;
+  margin-bottom: 1rem;
+}
+
+.leave-type-form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.leave-type-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.leave-type-field span,
+.leave-type-restriction-copy,
+.leave-type-inline-row span {
+  color: #1f2a37;
+}
+
+.leave-type-field input,
+.leave-type-inline-row select,
+.leave-type-inline-row input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  background: #fff;
+}
+
+.leave-type-form-grid-restrictions {
+  margin: 1rem 0;
+  max-width: 360px;
+}
+
+.leave-type-inline-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.leave-type-inline-row select {
+  width: 180px;
+}
+
+.leave-type-inline-row input {
+  width: 72px;
+}
+
+.leave-type-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #1f2a37;
+}
+
+.leave-type-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1.25rem;
+}
+
+.leave-type-detail-actions button {
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #d7dee7;
+  background: #3b7696;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.leave-type-detail-actions .ghost {
+  background: #fff;
+  color: #1f2a37;
 }
 
 .settings-table {

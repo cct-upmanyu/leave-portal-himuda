@@ -1,27 +1,33 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { authApi } from './api/authapi'
-import { lookupApi } from './api/lookupApi'
+import { employeeApi } from './api/employeeApi'
 import { holidayApi } from './api/holidayApi'
+import { leaveApi } from './api/leaveApi'
 import { leaveTypeApi } from './api/leaveTypeApi'
+import { lookupApi } from './api/lookupApi'
 import { notificationApi } from './api/notificationApi'
 import authReducer from './slices/authSlice'
 
 export const store = configureStore({
   reducer: {
-    [authApi.reducerPath]: authApi.reducer,
-    [lookupApi.reducerPath]: lookupApi.reducer,
-    [holidayApi.reducerPath]: holidayApi.reducer,
-    [leaveTypeApi.reducerPath]: leaveTypeApi.reducer,
-    [notificationApi.reducerPath]: notificationApi.reducer,
     auth: authReducer,
+    [authApi.reducerPath]: authApi.reducer,
+    [employeeApi.reducerPath]: employeeApi.reducer,
+    [holidayApi.reducerPath]: holidayApi.reducer,
+    [leaveApi.reducerPath]: leaveApi.reducer,
+    [leaveTypeApi.reducerPath]: leaveTypeApi.reducer,
+    [lookupApi.reducerPath]: lookupApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authApi.middleware,
-      lookupApi.middleware,
+      employeeApi.middleware,
       holidayApi.middleware,
+      leaveApi.middleware,
       leaveTypeApi.middleware,
+      lookupApi.middleware,
       notificationApi.middleware,
     ),
 })

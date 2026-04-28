@@ -6,6 +6,7 @@ import AnnouncementManager from '../components/AnnouncementManager'
 
 const supportedTables = {
   districts: { table: 'districts', title: 'Districts' },
+  states: { table: 'states', title: 'States' },
   departments: { table: 'departments', title: 'Departments' },
   designations: { table: 'designations', title: 'Designations' },
   divisions: { table: 'divisions', title: 'Divisions' },

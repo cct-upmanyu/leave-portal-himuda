@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux'
 import { authApi, useLoginMutation } from '../redux/api/authapi'
 import { clearForcedLogout, setUser } from '../redux/slices/authSlice'
 import { toastService } from '../utils/toastService'
+import logo from '../assets/logo.webp'
 import '../styles/Login.css'
 
 function Login() {
@@ -77,8 +78,8 @@ function Login() {
         <section className="login-panel login-panel--left">
           <div className="login-left-content">
             <p className="login-welcome">Welcome to <span>HIMUDA</span></p>
-            <div className="login-logo-ring" aria-hidden="true">
-              <div className="login-logo-inner">HIMUDA</div>
+            <div className="login-logo-ring">
+              <img className="login-logo-image" src={logo} alt="HIMUDA logo" />
             </div>
             <p className="login-org">HP Housing & Urban Development Authority</p>
             <p className="login-tagline">(A Government Undertaking, Himachal Pradesh)</p>

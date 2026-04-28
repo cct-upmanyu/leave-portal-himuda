@@ -7,6 +7,8 @@ import ComingSoon from './pages/ComingSoon'
 import SettingsLayout from './pages/SettingsLayout'
 import SettingsLookupPage from './pages/SettingsLookupPage'
 import Test from './pages/Test'
+import Employees from './pages/Employees'
+import Approvals from './pages/Approvals'
 import './App.css'
 
 function App() {
@@ -22,15 +24,17 @@ function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/approvals" element={<ComingSoon title="Approvals" />} />
-        <Route path="/employees" element={<ComingSoon title="Employees" />} />
+        <Route path="/approvals" element={<Approvals />} />
+        <Route path="/employees" element={<Employees />} />
         <Route path="/work-diary" element={<ComingSoon title="Work Diary" />} />
 
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<Navigate to="/settings/districts" replace />} />
           <Route path="districts" element={<SettingsLookupPage slug="districts" />} />
+          <Route path="states" element={<SettingsLookupPage slug="states" />} />
           <Route path="departments" element={<SettingsLookupPage slug="departments" />} />
           <Route path="leave-types" element={<SettingsLookupPage slug="leave-types" />} />
+          <Route path="leave-types/:id/:tab" element={<SettingsLookupPage slug="leave-types" />} />
           <Route path="designations" element={<SettingsLookupPage slug="designations" />} />
           <Route path="holidays" element={<SettingsLookupPage slug="holidays" />} />
           <Route path="holiday-type" element={<SettingsLookupPage slug="holiday-type" />} />

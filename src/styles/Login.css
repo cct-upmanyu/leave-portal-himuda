@@ -73,16 +73,13 @@
   background: rgba(209, 163, 108, 0.08);
 }
 
-.login-logo-inner {
+.login-logo-image {
   width: 92px;
   height: 92px;
   border-radius: 50%;
-  border: 2px dashed rgba(255, 255, 255, 0.4);
-  display: grid;
-  place-items: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  object-fit: contain;
+  background: #ffffff;
+  padding: 8px;
 }
 
 .login-org {
