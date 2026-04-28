@@ -6,8 +6,13 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
   credentials: 'include',
-  prepareHeaders: (headers) => {
-    headers.set('Content-Type', 'application/json')
+  prepareHeaders: (headers, { arg }) => {
+    const hasBody = typeof arg === 'object' && arg !== null && 'body' in arg && arg.body !== undefined
+
+    if (hasBody && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+
     return headers
   },
 })
