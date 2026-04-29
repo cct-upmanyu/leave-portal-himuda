@@ -2,15 +2,7 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { toastService } from '../../utils/toastService'
 import { getAuthToken } from '../../utils/authToken'
 
-const normalizeBaseUrl = (value) => {
-  if (!value) {
-    return '/server/leave-portal-backend/'
-  }
-
-  return value.endsWith('/') ? value : `${value}/`
-}
-
-const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
+const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
