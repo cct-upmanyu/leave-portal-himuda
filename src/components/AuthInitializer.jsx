@@ -8,7 +8,7 @@ import {
   setAuthLoading,
   setUser,
 } from '../redux/slices/authSlice'
-import { clearAuthToken } from '../utils/authToken'
+import { clearAuthToken, getAuthToken } from '../utils/authToken'
 
 const getUserFromResponse = (response) => {
   return response?.data || response?.user || null
@@ -19,12 +19,14 @@ function AuthInitializer({ children }) {
   const { user, forcedLogout } = useSelector((state) => state.auth)
   const navigate = useNavigate()
   const location = useLocation()
-  const { data, isLoading, isSuccess, isError } = useMeQuery(undefined, {
-    skip: Boolean(user) || forcedLogout,
+  const token = getAuthToken()
+  const { data, error, isLoading, isSuccess, isError } = useMeQuery(undefined, {
+    skip: Boolean(user) || forcedLogout || !token,
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
   })
   const isPublicRoute = location.pathname === '/login' || location.pathname === '/test'
+  const isUnauthorized = isError && (error?.status === 401 || error?.status === 403)
 
   useEffect(() => {
     if (isLoading) {
@@ -47,6 +49,13 @@ function AuthInitializer({ children }) {
       }
       return
     }
+    if (!token) {
+      dispatch(clearUser())
+      if (!isPublicRoute) {
+        navigate('/login', { replace: true })
+      }
+      return
+    }
     if (isSuccess) {
       const user = getUserFromResponse(data)
       if (user) {
@@ -58,14 +67,14 @@ function AuthInitializer({ children }) {
         return
       }
     }
-    if (isError || (isSuccess && !getUserFromResponse(data))) {
+    if (isUnauthorized || (isSuccess && !getUserFromResponse(data))) {
       clearAuthToken()
       dispatch(clearUser())
       if (!isPublicRoute) {
         navigate('/login', { replace: true })
       }
     }
-  }, [data, dispatch, isError, isSuccess, isPublicRoute, location.pathname, navigate])
+  }, [data, dispatch, isPublicRoute, isSuccess, isUnauthorized, location.pathname, navigate, token])
 
   return children
 }

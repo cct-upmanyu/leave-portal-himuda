@@ -6,7 +6,6 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
-  credentials: 'include',
   prepareHeaders: (headers, { arg }) => {
     const hasBody = typeof arg === 'object' && arg !== null && 'body' in arg && arg.body !== undefined
     const token = getAuthToken()
