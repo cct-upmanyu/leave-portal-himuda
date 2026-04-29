@@ -8,6 +8,7 @@ import {
   setAuthLoading,
   setUser,
 } from '../redux/slices/authSlice'
+import { clearAuthToken } from '../utils/authToken'
 
 const getUserFromResponse = (response) => {
   return response?.data || response?.user || null
@@ -33,6 +34,7 @@ function AuthInitializer({ children }) {
 
   useEffect(() => {
     if (forcedLogout) {
+      clearAuthToken()
       dispatch(clearUser())
       if (!isPublicRoute) {
         navigate('/login', { replace: true })
@@ -57,6 +59,7 @@ function AuthInitializer({ children }) {
       }
     }
     if (isError || (isSuccess && !getUserFromResponse(data))) {
+      clearAuthToken()
       dispatch(clearUser())
       if (!isPublicRoute) {
         navigate('/login', { replace: true })

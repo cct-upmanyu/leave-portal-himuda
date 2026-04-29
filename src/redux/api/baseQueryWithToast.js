@@ -1,5 +1,6 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { toastService } from '../../utils/toastService'
+import { getAuthToken } from '../../utils/authToken'
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -8,9 +9,14 @@ const rawBaseQuery = fetchBaseQuery({
   credentials: 'include',
   prepareHeaders: (headers, { arg }) => {
     const hasBody = typeof arg === 'object' && arg !== null && 'body' in arg && arg.body !== undefined
+    const token = getAuthToken()
 
     if (hasBody && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
+    }
+
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`)
     }
 
     return headers

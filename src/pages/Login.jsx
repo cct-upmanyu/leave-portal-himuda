@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux'
 import { useSelector } from 'react-redux'
 import { authApi, useLoginMutation } from '../redux/api/authapi'
 import { clearForcedLogout, setUser } from '../redux/slices/authSlice'
+import { setAuthToken } from '../utils/authToken'
 import { toastService } from '../utils/toastService'
 import logo from '../assets/logo.webp'
 import '../styles/Login.css'
@@ -47,7 +48,16 @@ function Login() {
 
     try {
       const response = await login(credentials).unwrap()
-      const user = response?.data || response?.user || null
+      const userPayload = response?.data || response?.user || null
+      const token = userPayload?.token || response?.token || null
+      const user = userPayload
+        ? (({ token: _token, ...rest }) => rest)(userPayload)
+        : null
+
+      if (token) {
+        setAuthToken(token)
+      }
+
       if (user) {
         dispatch(setUser(user))
         dispatch(clearForcedLogout())

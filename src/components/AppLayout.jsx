@@ -4,6 +4,7 @@ import Sidebar from './Sidebar'
 import '../styles/Layout.css'
 import { authApi, useLogoutMutation } from '../redux/api/authapi'
 import { clearUser, setForcedLogout } from '../redux/slices/authSlice'
+import { clearAuthToken } from '../utils/authToken'
 
 const getTitle = (pathname) => {
   if (pathname.startsWith('/settings')) {
@@ -32,6 +33,7 @@ function AppLayout() {
     try {
       await logout().unwrap()
     } finally {
+      clearAuthToken()
       dispatch(setForcedLogout())
       dispatch(clearUser())
       dispatch(authApi.util.resetApiState())
