@@ -2,9 +2,15 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { toastService } from '../../utils/toastService'
 import { getAuthToken } from '../../utils/authToken'
 
+const defaultProductionBaseUrl = 'https://leave-portal-60068167284.catalystserverless.in/server/leave-portal-backend/'
+
 const normalizeBaseUrl = (value) => {
   if (!value) {
-    return '/server/leave-portal-backend/'
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return '/server/leave-portal-backend/'
+    }
+
+    return defaultProductionBaseUrl
   }
 
   return value.endsWith('/') ? value : `${value}/`
@@ -12,8 +18,32 @@ const normalizeBaseUrl = (value) => {
 
 const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
+const parseResponse = async (response) => {
+  const text = await response.text()
+
+  if (!text) {
+    return null
+  }
+
+  const trimmed = text.trim()
+  const contentType = response.headers.get('content-type') || ''
+  const looksLikeJson =
+    contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[')
+
+  if (looksLikeJson) {
+    return JSON.parse(trimmed)
+  }
+
+  if (trimmed.toLowerCase().startsWith('<!doctype') || trimmed.toLowerCase().startsWith('<html')) {
+    throw new Error('API returned HTML instead of JSON. Check the deployed API base URL and server routing.')
+  }
+
+  return trimmed
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
+  responseHandler: parseResponse,
   prepareHeaders: (headers, { arg }) => {
     const hasBody = typeof arg === 'object' && arg !== null && 'body' in arg && arg.body !== undefined
     const token = getAuthToken()
@@ -48,8 +78,8 @@ const getAuthSuccess = (url) => {
 }
 
 const getErrorMessage = (error) =>
-  error?.data?.error ||
   error?.data?.message ||
+  error?.data?.error ||
   error?.error ||
   'Something went wrong.'
 
