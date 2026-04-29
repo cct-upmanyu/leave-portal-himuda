@@ -51,10 +51,11 @@ export const baseQueryWithToast = async (args, api, extraOptions) => {
   const method = typeof args === 'string' ? 'GET' : (args.method || 'GET').toUpperCase()
   const url = typeof args === 'string' ? args : args.url
   const isMutation = method !== 'GET'
-  const isSilentEndpoint = api?.endpoint === 'me'
+  const isAuthEndpoint = typeof url === 'string' && url.includes('/api/auth/')
+  const shouldShowErrorToast = isMutation || isAuthEndpoint
 
   if (result.error) {
-    if (!isSilentEndpoint) {
+    if (shouldShowErrorToast) {
       const status = result.error?.status
       toastService.show({
         severity: status === 401 || status === 403 ? 'warn' : 'error',
