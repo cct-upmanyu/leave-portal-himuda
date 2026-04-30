@@ -28,7 +28,14 @@ function App() {
         <Route path="/employees" element={<Employees />} />
         <Route path="/work-diary" element={<ComingSoon title="Work Diary" />} />
 
-        <Route path="/settings" element={<SettingsLayout />}>
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute requireAdmin>
+              <SettingsLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/settings/districts" replace />} />
           <Route path="districts" element={<SettingsLookupPage slug="districts" />} />
           <Route path="states" element={<SettingsLookupPage slug="states" />} />

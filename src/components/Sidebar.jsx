@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { isAdminUser } from '../utils/access'
 import '../styles/Layout.css'
 
 const settingsLinks = [
@@ -15,6 +17,8 @@ const settingsLinks = [
 ]
 
 function Sidebar() {
+  const user = useSelector((state) => state.auth.user)
+  const isAdmin = isAdminUser(user)
   const navClass = ({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')
   const subClass = ({ isActive }) =>
     isActive ? 'nav-sub-item active' : 'nav-sub-item'
@@ -33,23 +37,27 @@ function Sidebar() {
           Dashboard
         </NavLink>
         <NavLink to="/approvals" className={navClass}>
-          Approvals
+          {isAdmin ? 'Approvals' : 'My Leaves'}
         </NavLink>
         <NavLink to="/employees" className={navClass}>
-          Employees
+          {isAdmin ? 'Employees' : 'My Profile'}
         </NavLink>
         <NavLink to="/work-diary" className={navClass}>
           Work Diary
         </NavLink>
 
-        <div className="nav-section">Settings</div>
-        <div className="nav-sub">
-          {settingsLinks.map((link) => (
-            <NavLink key={link.to} to={link.to} className={subClass}>
-              {link.label}
-            </NavLink>
-          ))}
-        </div>
+        {isAdmin ? (
+          <>
+            <div className="nav-section">Settings</div>
+            <div className="nav-sub">
+              {settingsLinks.map((link) => (
+                <NavLink key={link.to} to={link.to} className={subClass}>
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+          </>
+        ) : null}
       </nav>
     </aside>
   )

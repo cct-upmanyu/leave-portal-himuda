@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSelector } from 'react-redux'
 import {
   useCreateLeaveMutation,
   useGetLeavesQuery,
   useUpdateLeaveMutation,
 } from '../redux/api/leaveApi'
-import { useGetEmployeesQuery } from '../redux/api/employeeApi'
+import { useGetEmployeesQuery, useGetManagersQuery, useUpdateEmployeeMutation } from '../redux/api/employeeApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
+import { isAdminUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
 import '../styles/Approvals.css'
 
@@ -17,21 +19,6 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`
 }
 
-const getMonthBoundary = (type) => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const monthIndex = today.getMonth()
-  const date =
-    type === 'start'
-      ? new Date(year, monthIndex, 1)
-      : new Date(year, monthIndex + 1, 0)
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
-}
-
-const CURRENT_MONTH_START = getMonthBoundary('start')
-const CURRENT_MONTH_END = getMonthBoundary('end')
 const TODAY = getTodayString()
 
 const emptyForm = {
@@ -82,6 +69,16 @@ const getEmployeeName = (employee) => {
 
 const getEmployeeUserId = (employee) => String(employee?.emp_id || employee?.id || '')
 
+const formatEmployeeCode = (employee) => employee?.emp_id || employee?.id || '-'
+
+const getInitials = (value) =>
+  String(value || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'NA'
+
 const getLeaveDateOptions = (startDate, endDate) => {
   const values = [startDate, endDate].filter(Boolean)
   return [...new Set(values)]
@@ -114,15 +111,23 @@ const statusLabel = (status) => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
+const sortLeavesByStartDate = (records) =>
+  [...records].sort((left, right) => String(right.startDate || '').localeCompare(String(left.startDate || '')))
+
 function Approvals() {
+  const user = useSelector((state) => state.auth.user)
+  const isAdmin = isAdminUser(user)
   const { data: leaveResponse, isLoading: isLeavesLoading } = useGetLeavesQuery()
   const { data: employeeResponse } = useGetEmployeesQuery()
+  const { data: managersResponse } = useGetManagersQuery(undefined, { skip: !isAdmin })
   const { data: leaveTypeResponse } = useGetLeaveTypesQuery()
   const [createLeave, { isLoading: isCreating }] = useCreateLeaveMutation()
   const [updateLeave, { isLoading: isUpdating }] = useUpdateLeaveMutation()
+  const [updateEmployee, { isLoading: isAssigningManager }] = useUpdateEmployeeMutation()
 
   const leaves = leaveResponse?.data || []
   const employees = employeeResponse?.data || []
+  const managers = managersResponse?.data || []
   const leaveTypes = leaveTypeResponse?.data || []
 
   const employeeMap = useMemo(
@@ -149,9 +154,29 @@ function Approvals() {
     [employeeMap, leaveTypeMap, leaves],
   )
 
+  const leaveHistoryByEmployee = useMemo(() => {
+    const grouped = new Map()
+
+    normalizedLeaves.forEach((leave) => {
+      const key = String(leave.userId || '')
+      if (!grouped.has(key)) {
+        grouped.set(key, [])
+      }
+      grouped.get(key).push(leave)
+    })
+
+    grouped.forEach((records, key) => {
+      grouped.set(key, sortLeavesByStartDate(records))
+    })
+
+    return grouped
+  }, [normalizedLeaves])
+
   const [isApplyOpen, setIsApplyOpen] = useState(false)
   const [activeMenuId, setActiveMenuId] = useState(null)
   const [selectedLeave, setSelectedLeave] = useState(null)
+  const [assignManagerLeave, setAssignManagerLeave] = useState(null)
+  const [selectedManagerId, setSelectedManagerId] = useState('')
   const [form, setForm] = useState(emptyForm)
 
   const leaveDateOptions = useMemo(
@@ -159,7 +184,7 @@ function Approvals() {
     [form.endDate, form.startDate],
   )
 
-  const endDateMin = form.startDate || TODAY
+  const endDateMin = form.startDate || ''
   const isDateRangeReady = Boolean(form.startDate && form.endDate)
   const duration = getDaysLabel(form)
 
@@ -188,11 +213,6 @@ function Approvals() {
 
       if (current.endDate && current.startDate && current.endDate < current.startDate) {
         next = { ...next, endDate: current.startDate }
-        changed = true
-      }
-
-      if (!current.startDate && current.endDate && current.endDate < TODAY) {
-        next = { ...next, endDate: TODAY }
         changed = true
       }
 
@@ -229,9 +249,31 @@ function Approvals() {
     return () => window.removeEventListener('click', handleCloseMenu)
   }, [])
 
+  useEffect(() => {
+    if (!selectedLeave) return
+    const latestLeave = normalizedLeaves.find((leave) => leave.id === selectedLeave.id)
+    if (latestLeave) {
+      setSelectedLeave(latestLeave)
+    }
+  }, [normalizedLeaves, selectedLeave])
+
   const handleMenuToggle = (event, id) => {
     event.stopPropagation()
     setActiveMenuId((current) => (current === id ? null : id))
+  }
+
+  const openLeaveDetails = (leave) => {
+    setSelectedLeave(leave)
+    setActiveMenuId(null)
+  }
+
+  const canManageLeave = (leave) =>
+    isAdmin || (String(leave?.reportingManagerId || '') === String(user?.rowid || '') && String(leave?.userId || '') !== String(user?.rowid || ''))
+
+  const openAssignManagerModal = (leave) => {
+    setAssignManagerLeave(leave)
+    setSelectedManagerId(String(leave?.reportingManagerId || ''))
+    setActiveMenuId(null)
   }
 
   const handleStatusUpdate = async (leave, status) => {
@@ -241,6 +283,26 @@ function Approvals() {
     if (selectedLeave?.id === leave.id) {
       setSelectedLeave({ ...selectedLeave, status: nextStatus })
     }
+  }
+
+  const handleAssignManager = async (event) => {
+    event.preventDefault()
+    const employeeRecord = employees.find((employee) => String(employee.emp_id || employee.id || '') === String(assignManagerLeave?.userId || ''))
+    const employeeId = employeeRecord?.id || assignManagerLeave?.employeeDetailId
+
+    if (!employeeId || !selectedManagerId) {
+      toastService.show({
+        severity: 'warn',
+        summary: 'Selection required',
+        detail: 'Please choose a reporting manager first.',
+        life: 2500,
+      })
+      return
+    }
+
+    await updateEmployee({ id: employeeId, reporting_manager: selectedManagerId }).unwrap()
+    setAssignManagerLeave(null)
+    setSelectedManagerId('')
   }
 
   const handleCheckboxSelection = (name, checked) => {
@@ -313,7 +375,6 @@ function Approvals() {
       ...emptyForm,
       employeeId: current.employeeId || getEmployeeUserId(employees[0]),
       leaveTypeId: current.leaveTypeId || String(leaveTypes[0]?.id || ''),
-      endDate: TODAY,
     }))
     setIsApplyOpen(true)
   }
@@ -353,9 +414,27 @@ function Approvals() {
       ...emptyForm,
       employeeId: form.employeeId,
       leaveTypeId: form.leaveTypeId,
-      endDate: TODAY,
     })
   }
+
+  const selectedEmployee = selectedLeave
+    ? employeeMap.get(String(selectedLeave.userId)) || {
+        id: selectedLeave.employeeDetailId || null,
+        emp_id: selectedLeave.userId || null,
+        email: selectedLeave.email || null,
+        mobile: selectedLeave.mobileNumber || null,
+        emergency_contact_name: selectedLeave.emergencyContactName || null,
+        emergency_contact_number: selectedLeave.emergencyContactNumber || null,
+        date_of_joining: selectedLeave.employeeDateOfJoining || null,
+        reporting_manager: selectedLeave.reportingManagerId || null,
+      }
+    : null
+  const selectedEmployeeHistory = selectedLeave
+    ? leaveHistoryByEmployee.get(String(selectedLeave.userId)) || []
+    : []
+  const selectedEmployeeApprovedCount = selectedEmployeeHistory.filter((leave) => leave.status === 'approved').length
+  const selectedEmployeePendingCount = selectedEmployeeHistory.filter((leave) => leave.status === 'pending').length
+  const selectedEmployeeCancelledCount = selectedEmployeeHistory.filter((leave) => leave.status === 'cancelled').length
 
   return (
     <div className="approvals-page">
@@ -399,7 +478,18 @@ function Approvals() {
                 </tr>
               ) : (
                 normalizedLeaves.map((leave) => (
-                  <tr key={leave.id}>
+                  <tr
+                    key={leave.id}
+                    className="approval-row"
+                    onClick={() => openLeaveDetails(leave)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openLeaveDetails(leave)
+                      }
+                    }}
+                    tabIndex={0}
+                  >
                     <td>{leave.leaveTypeName}</td>
                     <td>{leave.employeeName || '-'}</td>
                     <td>{formatDate(leave.startDate)}</td>
@@ -425,29 +515,32 @@ function Approvals() {
                         </button>
                         {activeMenuId === leave.id ? (
                           <div className="approval-menu" onClick={(event) => event.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedLeave(leave)
-                                setActiveMenuId(null)
-                              }}
-                            >
+                            <button type="button" onClick={() => openLeaveDetails(leave)}>
                               View
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatusUpdate(leave, 'approved')}
-                              disabled={isUpdating}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatusUpdate(leave, 'rejected')}
-                              disabled={isUpdating}
-                            >
-                              Reject
-                            </button>
+                            {isAdmin ? (
+                              <button type="button" onClick={() => openAssignManagerModal(leave)}>
+                                Assign Reporting Manager
+                              </button>
+                            ) : null}
+                            {canManageLeave(leave) ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusUpdate(leave, 'approved')}
+                                  disabled={isUpdating}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusUpdate(leave, 'rejected')}
+                                  disabled={isUpdating}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -462,95 +555,302 @@ function Approvals() {
 
       {selectedLeave ? (
         <div className="approval-overlay" onClick={() => setSelectedLeave(null)}>
-          <div className="approval-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="approval-modal approval-detail-modal" onClick={(event) => event.stopPropagation()}>
             <div className="approval-modal-head">
               <div>
-                <h3>Leave Request Details</h3>
-                <p>{selectedLeave.employeeName || '-'}</p>
+                <h3>Employee Leave Details</h3>
+                <p>Approval record, employee profile, and leave summary in one view.</p>
               </div>
               <button type="button" className="approval-close-btn" onClick={() => setSelectedLeave(null)}>
                 x
               </button>
             </div>
 
-            <div className="approval-detail-grid">
-              <div>
-                <span>Leave Type</span>
+            <div className="approval-detail-hero">
+              <div className="approval-employee-spotlight">
+                <div className="approval-employee-avatar">{getInitials(selectedLeave.employeeName)}</div>
+                <div className="approval-employee-copy">
+                  <span className="approval-eyebrow">Employee profile</span>
+                  <h4>{selectedLeave.employeeName || '-'}</h4>
+                  <p>
+                    Code {formatEmployeeCode(selectedEmployee)} • Joined {formatDate(selectedEmployee?.date_of_joining)}
+                  </p>
+                </div>
+              </div>
+              <div className="approval-hero-status">
+                <span className={`approval-status approval-status-${selectedLeave.status || 'pending'}`}>
+                  {statusLabel(selectedLeave.status)}
+                </span>
                 <strong>{selectedLeave.leaveTypeName}</strong>
+                <small>
+                  {formatDate(selectedLeave.startDate)} to {formatDate(selectedLeave.endDate)}
+                </small>
+              </div>
+            </div>
+
+            <div className="approval-summary-strip">
+              <div>
+                <span>Total Leaves</span>
+                <strong>{selectedEmployeeHistory.length}</strong>
               </div>
               <div>
-                <span>Status</span>
-                <strong>{statusLabel(selectedLeave.status)}</strong>
+                <span>Approved</span>
+                <strong>{selectedEmployeeApprovedCount}</strong>
               </div>
               <div>
-                <span>From</span>
-                <strong>{formatDate(selectedLeave.startDate)}</strong>
+                <span>Pending</span>
+                <strong>{selectedEmployeePendingCount}</strong>
               </div>
               <div>
-                <span>To</span>
-                <strong>{formatDate(selectedLeave.endDate)}</strong>
+                <span>Cancelled</span>
+                <strong>{selectedEmployeeCancelledCount}</strong>
               </div>
-              <div>
-                <span>Days</span>
-                <strong>{selectedLeave.daysDisplay || selectedLeave.days}</strong>
-              </div>
-              <div>
-                <span>Half / Short</span>
-                <strong>
-                  {selectedLeave.shortLeave
-                    ? `Short Leave (${formatDate(selectedLeave.shortLeaveDate)})`
-                    : selectedLeave.halfLeave
-                      ? `Half Leave (${formatDate(selectedLeave.halfLeaveDate)})`
-                      : 'Full Leave'}
-                </strong>
-              </div>
-              <div className="approval-detail-wide">
-                <span>Reason</span>
-                <strong>{selectedLeave.reason || '-'}</strong>
-              </div>
-              <div className="approval-detail-wide">
-                <span>Out of Station</span>
-                <strong>{selectedLeave.leaveStation === 'yes' ? 'Yes' : 'No'}</strong>
-              </div>
-              {selectedLeave.leaveStation === 'yes' ? (
-                <>
-                  <div>
-                    <span>Date &amp; Time (Leave)</span>
-                    <strong>{formatDateTime(selectedLeave.dateTimeLeave)}</strong>
+            </div>
+
+            <div className="approval-detail-layout">
+              <div className="approval-detail-main">
+                <div className="approval-detail-section">
+                  <div className="approval-section-head">
+                    <h4>Selected Leave Request</h4>
+                    <p>Current request details with the same approve and reject workflow.</p>
                   </div>
-                  <div>
-                    <span>Date &amp; Time (Return)</span>
-                    <strong>{formatDateTime(selectedLeave.dateTimeReturn)}</strong>
+                  <div className="approval-detail-grid approval-detail-grid-featured">
+                    <div>
+                      <span>Leave Type</span>
+                      <strong>{selectedLeave.leaveTypeName}</strong>
+                    </div>
+                    <div>
+                      <span>Days</span>
+                      <strong>{selectedLeave.daysDisplay || selectedLeave.days}</strong>
+                    </div>
+                    <div>
+                      <span>From</span>
+                      <strong>{formatDate(selectedLeave.startDate)}</strong>
+                    </div>
+                    <div>
+                      <span>To</span>
+                      <strong>{formatDate(selectedLeave.endDate)}</strong>
+                    </div>
+                    <div>
+                      <span>Half / Short</span>
+                      <strong>
+                        {selectedLeave.shortLeave
+                          ? `Short Leave (${formatDate(selectedLeave.shortLeaveDate)})`
+                          : selectedLeave.halfLeave
+                            ? `Half Leave (${formatDate(selectedLeave.halfLeaveDate)})`
+                            : 'Full Leave'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Out of Station</span>
+                      <strong>{selectedLeave.leaveStation === 'yes' ? 'Yes' : 'No'}</strong>
+                    </div>
+                    <div className="approval-detail-wide">
+                      <span>Reason</span>
+                      <strong>{selectedLeave.reason || '-'}</strong>
+                    </div>
+                    {selectedLeave.leaveStation === 'yes' ? (
+                      <>
+                        <div>
+                          <span>Date &amp; Time (Leave)</span>
+                          <strong>{formatDateTime(selectedLeave.dateTimeLeave)}</strong>
+                        </div>
+                        <div>
+                          <span>Date &amp; Time (Return)</span>
+                          <strong>{formatDateTime(selectedLeave.dateTimeReturn)}</strong>
+                        </div>
+                        <div className="approval-detail-wide">
+                          <span>Address during absence</span>
+                          <strong>{selectedLeave.addressDuringLeave || '-'}</strong>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
-                  <div className="approval-detail-wide">
-                    <span>Address during absence</span>
-                    <strong>{selectedLeave.addressDuringLeave || '-'}</strong>
+                </div>
+
+                <div className="approval-detail-section">
+                  <div className="approval-section-head">
+                    <h4>All Leave Details</h4>
+                    <p>Recent leave history for this employee.</p>
                   </div>
-                </>
-              ) : null}
+                  {selectedEmployeeHistory.length ? (
+                    <div className="approval-history-wrap">
+                      <table className="approval-history-table">
+                        <thead>
+                          <tr>
+                            <th>Leave Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedEmployeeHistory.map((leave) => (
+                            <tr key={`history-${leave.id}`} className={leave.id === selectedLeave.id ? 'is-active' : ''}>
+                              <td>{leave.leaveTypeName}</td>
+                              <td>{formatDate(leave.startDate)}</td>
+                              <td>{formatDate(leave.endDate)}</td>
+                              <td>{leave.daysDisplay || leave.days || '-'}</td>
+                              <td>
+                                <span className={`approval-status approval-status-${leave.status || 'pending'}`}>
+                                  {statusLabel(leave.status)}
+                                </span>
+                              </td>
+                              <td>{leave.reason || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="approvals-empty approval-inline-empty">No leave history found for this employee.</div>
+                  )}
+                </div>
+              </div>
+              <aside className="approval-detail-side">
+                <div className="approval-detail-section approval-detail-panel">
+                  <div className="approval-section-head">
+                    <h4>Employee Information</h4>
+                    <p>Attached details from the employee record.</p>
+                  </div>
+                  <div className="approval-detail-stack">
+                    <div>
+                      <span>Employee Code</span>
+                      <strong>{formatEmployeeCode(selectedEmployee)}</strong>
+                    </div>
+                    <div>
+                      <span>Email</span>
+                      <strong>{selectedEmployee?.email || selectedLeave.email || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Mobile Number</span>
+                      <strong>{selectedEmployee?.mobile || selectedLeave.mobileNumber || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Date of Joining</span>
+                      <strong>{formatDate(selectedEmployee?.date_of_joining)}</strong>
+                    </div>
+                    <div>
+                      <span>Reporting Manager</span>
+                      <strong>{selectedEmployee?.reporting_manager || selectedLeave.reportingManagerId || '-'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="approval-detail-section approval-detail-panel">
+                  <div className="approval-section-head">
+                    <h4>Contact During Leave</h4>
+                    <p>Useful details for follow-up while the employee is away.</p>
+                  </div>
+                  <div className="approval-detail-stack">
+                    <div>
+                      <span>Emergency Contact</span>
+                      <strong>{selectedLeave.emergencyContactName || selectedEmployee?.emergency_contact_name || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Emergency Number</span>
+                      <strong>{selectedLeave.emergencyContactNumber || selectedEmployee?.emergency_contact_number || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Leave Station</span>
+                      <strong>{selectedLeave.leaveStation === 'yes' ? 'Out of station' : 'Within station'}</strong>
+                    </div>
+                    {selectedLeave.leaveStation === 'yes' ? (
+                      <>
+                        <div>
+                          <span>Date &amp; Time (Leave)</span>
+                          <strong>{formatDateTime(selectedLeave.dateTimeLeave)}</strong>
+                        </div>
+                        <div>
+                          <span>Date &amp; Time (Return)</span>
+                          <strong>{formatDateTime(selectedLeave.dateTimeReturn)}</strong>
+                        </div>
+                        <div>
+                          <span>Address During Leave</span>
+                          <strong>{selectedLeave.addressDuringLeave || '-'}</strong>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </aside>
             </div>
 
             <div className="approval-modal-actions">
               <button type="button" className="approval-secondary-btn" onClick={() => setSelectedLeave(null)}>
                 Close
               </button>
-              <button
-                type="button"
-                className="approval-approve-btn"
-                onClick={() => handleStatusUpdate(selectedLeave, 'approved')}
-                disabled={isUpdating}
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                className="approval-reject-btn"
-                onClick={() => handleStatusUpdate(selectedLeave, 'rejected')}
-                disabled={isUpdating}
-              >
-                Reject
+              {canManageLeave(selectedLeave) ? (
+                <>
+                  <button
+                    type="button"
+                    className="approval-approve-btn"
+                    onClick={() => handleStatusUpdate(selectedLeave, 'approved')}
+                    disabled={isUpdating}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="approval-reject-btn"
+                    onClick={() => handleStatusUpdate(selectedLeave, 'rejected')}
+                    disabled={isUpdating}
+                  >
+                    Reject
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {assignManagerLeave ? (
+        <div className="approval-overlay" onClick={() => setAssignManagerLeave(null)}>
+          <div className="approval-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="approval-modal-head">
+              <div>
+                <h3>Assign Reporting Manager</h3>
+                <p>{assignManagerLeave.employeeName || '-'}</p>
+              </div>
+              <button type="button" className="approval-close-btn" onClick={() => setAssignManagerLeave(null)}>
+                x
               </button>
             </div>
+
+            <form className="approval-form" onSubmit={handleAssignManager}>
+              <label>
+                <span>Reporting Manager</span>
+                <select
+                  name="reportingManager"
+                  value={selectedManagerId}
+                  onChange={(event) => setSelectedManagerId(event.target.value)}
+                  required
+                >
+                  <option value="">Select reporting manager</option>
+                  {managers
+                    .filter((manager) => String(manager.id || '') !== String(assignManagerLeave.userId || ''))
+                    .map((manager) => (
+                      <option key={manager.id} value={manager.id}>
+                        {[manager.first_name, manager.last_name].filter(Boolean).join(' ').trim() ||
+                          manager.user_name ||
+                          manager.email}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <div className="approval-modal-actions">
+                <button type="button" className="approval-secondary-btn" onClick={() => setAssignManagerLeave(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="approvals-primary-btn" disabled={isAssigningManager}>
+                  {isAssigningManager ? 'Assigning...' : 'Assign Manager'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
@@ -599,8 +899,6 @@ function Approvals() {
                     name="startDate"
                     value={form.startDate}
                     onChange={handleFormChange}
-                    min={CURRENT_MONTH_START}
-                    max={CURRENT_MONTH_END}
                     required
                   />
                 </label>
@@ -613,14 +911,13 @@ function Approvals() {
                     value={form.endDate}
                     onChange={handleFormChange}
                     min={endDateMin}
-                    max={CURRENT_MONTH_END}
                     required
                   />
                 </label>
               </div>
 
               <div className="approval-date-note">
-                Start and end dates are limited to the current month. End date starts from the selected start date, or from today if start date is not chosen yet.
+                You can select any leave dates. End date starts from the selected start date.
               </div>
 
               <div className="approval-toggle-row">

@@ -11,6 +11,24 @@
   border: 1px solid #e4edf5;
 }
 
+.employee-profile-card {
+  padding-bottom: 18px;
+}
+
+.employee-profile-toolbar {
+  margin-bottom: 18px;
+}
+
+.employee-profile-subtitle {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.employee-profile-form {
+  padding: 0;
+}
+
 .employee-toolbar {
   display: flex;
   align-items: center;

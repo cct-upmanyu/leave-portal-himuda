@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
 import {
   useCreateEmployeeMutation,
@@ -8,6 +9,7 @@ import {
   useGetManagersQuery,
   useUpdateEmployeeMutation,
 } from '../redux/api/employeeApi'
+import { isAdminUser } from '../utils/access'
 import '../styles/Employees.css'
 
 const initialFormState = {
@@ -129,6 +131,8 @@ const buildInitialFormData = (employee) => {
 }
 
 function Employees() {
+  const user = useSelector((state) => state.auth.user)
+  const isAdmin = isAdminUser(user)
   const [searchTerm, setSearchTerm] = useState('')
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -142,7 +146,7 @@ function Employees() {
   const { data: designationsData } = useGetLookupsQuery('designations')
   const { data: districtsData } = useGetLookupsQuery('districts')
   const { data: statesData } = useGetLookupsQuery('states')
-  const { data: managersData } = useGetManagersQuery()
+  const { data: managersData } = useGetManagersQuery(undefined, { skip: !isAdmin })
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation()
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
   const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation()
@@ -199,7 +203,24 @@ function Employees() {
     })
   }, [departmentMap, designationMap, employees, searchTerm])
 
+  const profileEmployee = !isAdmin ? filteredEmployees[0] || employees[0] || null : null
+
+  useEffect(() => {
+    if (!isAdmin && profileEmployee) {
+      const nextForm = buildInitialFormData(profileEmployee)
+      setEditingEmployee(profileEmployee)
+      setFormData(nextForm)
+      setSameAddress(
+        nextForm.permanent_address === nextForm.correspondence_address &&
+          nextForm.permanent_state === nextForm.correspondence_state &&
+          nextForm.permanent_district === nextForm.correspondence_district &&
+          nextForm.permanent_pin === nextForm.correspondence_pin,
+      )
+    }
+  }, [isAdmin, profileEmployee])
+
   const openAddModal = () => {
+    if (!isAdmin) return
     setEditingEmployee(null)
     setFormData(initialFormState)
     setSameAddress(false)
@@ -268,16 +289,19 @@ function Employees() {
     e.preventDefault()
     setFormError('')
 
-    const isEditing = Boolean(editingEmployee)
+    const activeEmployee = isAdmin ? editingEmployee : profileEmployee
+    const isEditing = Boolean(activeEmployee)
 
     try {
       const payload = getEmployeePayload(isEditing)
       if (isEditing) {
-        await updateEmployee({ id: editingEmployee.id, ...payload }).unwrap()
+        await updateEmployee({ id: activeEmployee.id, ...payload }).unwrap()
       } else {
         await createEmployee(payload).unwrap()
       }
-      closeFormModal()
+      if (isAdmin) {
+        closeFormModal()
+      }
     } catch (error) {
       setFormError(error?.data?.error || 'Failed to save employee.')
     }
@@ -306,24 +330,285 @@ function Employees() {
 
   return (
     <div className="employee-page">
+      {!isAdmin ? (
+        <div className="employee-list-card employee-profile-card">
+          <div className="employee-toolbar employee-profile-toolbar">
+            <div>
+              <h2>My Profile</h2>
+              <p className="employee-profile-subtitle">Update your personal and contact information here.</p>
+            </div>
+          </div>
+
+          {isLoading || isFetching ? (
+            <div className="employee-empty">Loading profile...</div>
+          ) : !profileEmployee ? (
+            <div className="employee-empty">Your profile details are not available yet.</div>
+          ) : (
+            <form className="employee-form employee-profile-form" onSubmit={handleSubmit}>
+              <section className="employee-card">
+                <div className="card-title">Personal Detail</div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Employee Code</label>
+                    <input type="text" value={formatEmployeeCode(profileEmployee)} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label>User Name</label>
+                    <input type="text" value={formData.user_name} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label>First Name *</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter first name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name *</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter last name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Date of Birth *</label>
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      value={formData.date_of_birth}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Gender *</label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="M">Male</option>
+                      <option value="F">Female</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Email Address *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Enter Email Address"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>CPF Number</label>
+                    <input type="text" value={formData.cpf_number} readOnly />
+                  </div>
+                </div>
+              </section>
+
+              <section className="employee-card">
+                <div className="card-title">Contact Info</div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Mobile Number *</label>
+                    <input
+                      type="text"
+                      name="mobile_number"
+                      value={formData.mobile_number}
+                      onChange={handleInputChange}
+                      placeholder="Enter Mobile Number"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Emergency Contact Number *</label>
+                    <input
+                      type="text"
+                      name="emergency_contact_number"
+                      value={formData.emergency_contact_number}
+                      onChange={handleInputChange}
+                      placeholder="Enter Emergency Contact Number"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Emergency Contact Name *</label>
+                    <input
+                      type="text"
+                      name="emergency_contact_name"
+                      value={formData.emergency_contact_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter Emergency Contact Name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>District *</label>
+                    <select
+                      name="permanent_district"
+                      value={formData.permanent_district}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select District</option>
+                      {districts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>State *</label>
+                    <select
+                      name="permanent_state"
+                      value={formData.permanent_state}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">State</option>
+                      {states.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Pin Code *</label>
+                    <input
+                      type="text"
+                      name="permanent_pin"
+                      value={formData.permanent_pin}
+                      onChange={handleInputChange}
+                      placeholder="Enter Pincode"
+                      required
+                    />
+                  </div>
+                  <div className="form-group form-group-full">
+                    <label>Permanent Address *</label>
+                    <textarea
+                      name="permanent_address"
+                      value={formData.permanent_address}
+                      onChange={handleInputChange}
+                      placeholder="Enter Permanent Address"
+                      rows="3"
+                      required
+                    />
+                  </div>
+                  <div className="form-group checkbox-group">
+                    <label>
+                      <input type="checkbox" checked={sameAddress} onChange={handleSameAddressChange} />
+                      Correspondence address is the same as permanent address.
+                    </label>
+                  </div>
+                  <div className="form-group form-group-full">
+                    <label>Correspondence Address *</label>
+                    <textarea
+                      name="correspondence_address"
+                      value={formData.correspondence_address}
+                      onChange={handleInputChange}
+                      placeholder="Enter Correspondence Address"
+                      rows="3"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Select State *</label>
+                    <select
+                      name="correspondence_state"
+                      value={formData.correspondence_state}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select State</option>
+                      {states.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>District *</label>
+                    <select
+                      name="correspondence_district"
+                      value={formData.correspondence_district}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select District</option>
+                      {districts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Pin Code *</label>
+                    <input
+                      type="text"
+                      name="correspondence_pin"
+                      value={formData.correspondence_pin}
+                      onChange={handleInputChange}
+                      placeholder="Enter Pincode"
+                      required
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {formError && <div className="form-error">{formError}</div>}
+
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={isSubmitLoading}>
+                  {isSubmitLoading ? 'Saving...' : 'Update Profile'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : (
       <div className="employee-list-card">
         <div className="employee-toolbar">
-          <h2>Manage Employees</h2>
+          <h2>{isAdmin ? 'Manage Employees' : 'My Profile'}</h2>
           <div className="employee-toolbar-actions">
-            <div className="employee-search">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search"
-              />
-              <button type="button" className="btn btn-primary btn-search">
-                Search
+            {isAdmin ? (
+              <>
+                <div className="employee-search">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search"
+                  />
+                  <button type="button" className="btn btn-primary btn-search">
+                    Search
+                  </button>
+                </div>
+                <button type="button" className="btn btn-primary" onClick={openAddModal}>
+                  Add Employee
+                </button>
+              </>
+            ) : profileEmployee ? (
+              <button type="button" className="btn btn-primary" onClick={() => openEditModal(profileEmployee)}>
+                Edit Profile
               </button>
-            </div>
-            <button type="button" className="btn btn-primary" onClick={openAddModal}>
-              Add Employee
-            </button>
+            ) : null}
           </div>
         </div>
 
@@ -336,7 +621,7 @@ function Employees() {
                 <th>Department</th>
                 <th>Date Of Joining</th>
                 <th>Designation</th>
-                <th className="employee-action-head">Action</th>
+                <th className="employee-action-head">{isAdmin ? 'Action' : 'Profile'}</th>
               </tr>
             </thead>
             <tbody>
@@ -350,33 +635,39 @@ function Employees() {
                     <td>{formatDisplayDate(employee.date_of_joining)}</td>
                     <td>{designationMap.get(String(employee.designation_id || '')) || '-'}</td>
                     <td className="employee-action-cell">
-                      <div className="employee-action-menu" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="employee-menu-trigger"
-                          onClick={(e) => stopMenuToggle(e, employee.id)}
-                          aria-label={`Open actions for ${fullName}`}
-                        >
-                          <span />
-                          <span />
-                          <span />
+                      {isAdmin ? (
+                        <div className="employee-action-menu" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="employee-menu-trigger"
+                            onClick={(e) => stopMenuToggle(e, employee.id)}
+                            aria-label={`Open actions for ${fullName}`}
+                          >
+                            <span />
+                            <span />
+                            <span />
+                          </button>
+                          {menuOpenId === employee.id && (
+                            <div className="employee-menu-popup">
+                              <button type="button" onClick={() => openEditModal(employee)}>
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="danger"
+                                onClick={() => handleDelete(employee)}
+                                disabled={isDeleting}
+                              >
+                                Trash
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <button type="button" className="btn btn-secondary" onClick={() => openEditModal(employee)}>
+                          Edit
                         </button>
-                        {menuOpenId === employee.id && (
-                          <div className="employee-menu-popup">
-                            <button type="button" onClick={() => openEditModal(employee)}>
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="danger"
-                              onClick={() => handleDelete(employee)}
-                              disabled={isDeleting}
-                            >
-                              Trash
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -391,15 +682,18 @@ function Employees() {
           {(isLoading || isFetching) && <div className="employee-empty">Loading employees...</div>}
         </div>
       </div>
+      )}
 
-      {isFormOpen && (
+      {isAdmin && isFormOpen && (
         <div className="employee-modal-backdrop" onClick={closeFormModal}>
           <div className="employee-modal employee-modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="employee-modal-header">
               <div>
-                <h3>{editingEmployee ? 'Edit Employee' : 'Add Employee'}</h3>
+                <h3>{!isAdmin ? 'Edit Profile' : editingEmployee ? 'Edit Employee' : 'Add Employee'}</h3>
                 <p>
-                  {editingEmployee
+                  {!isAdmin
+                    ? 'Update your basic profile information and save your changes.'
+                    : editingEmployee
                     ? 'Update the employee record and save your changes.'
                     : 'Fill out the employee details to create a new record.'}
                 </p>
@@ -478,9 +772,10 @@ function Employees() {
                       onChange={handleInputChange}
                       placeholder="Enter user name"
                       required
+                      disabled={!isAdmin}
                     />
                   </div>
-                  {!editingEmployee && (
+                  {!editingEmployee && isAdmin && (
                     <>
                       <div className="form-group">
                         <label>Password *</label>
@@ -509,6 +804,7 @@ function Employees() {
                 </div>
               </section>
 
+              {isAdmin ? (
               <section className="employee-card">
                 <div className="card-title">Employment Detail</div>
                 <div className="form-grid">
@@ -593,6 +889,7 @@ function Employees() {
                   </div>
                 </div>
               </section>
+              ) : null}
 
               <section className="employee-card">
                 <div className="card-title">Contact Info</div>
@@ -673,39 +970,43 @@ function Employees() {
                       required
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Organization Branching *</label>
-                    <select
-                      name="branch_type"
-                      value={formData.branch_type}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select Branch</option>
-                      {branchOptions.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Branch *</label>
-                    <select
-                      name="branch_id"
-                      value={formData.branch_id}
-                      onChange={handleInputChange}
-                      required
-                      disabled={!branchTable}
-                    >
-                      <option value="">Select</option>
-                      {branches.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {isAdmin ? (
+                    <>
+                      <div className="form-group">
+                        <label>Organization Branching *</label>
+                        <select
+                          name="branch_type"
+                          value={formData.branch_type}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="">Select Branch</option>
+                          {branchOptions.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Branch *</label>
+                        <select
+                          name="branch_id"
+                          value={formData.branch_id}
+                          onChange={handleInputChange}
+                          required
+                          disabled={!branchTable}
+                        >
+                          <option value="">Select</option>
+                          {branches.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : null}
                   <div className="form-group form-group-full">
                     <label>Permanent Address *</label>
                     <textarea
@@ -787,7 +1088,7 @@ function Employees() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmitLoading}>
-                  {isSubmitLoading ? 'Saving...' : editingEmployee ? 'Update Employee' : 'Create Employee'}
+                  {isSubmitLoading ? 'Saving...' : !isAdmin ? 'Update Profile' : editingEmployee ? 'Update Employee' : 'Create Employee'}
                 </button>
               </div>
             </form>

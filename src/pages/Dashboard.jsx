@@ -6,6 +6,7 @@ import { useGetLeavesQuery } from '../redux/api/leaveApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
 import { useGetNotificationsQuery } from '../redux/api/notificationApi'
+import { getUserDisplayName, isAdminUser, isReportingManagerUser } from '../utils/access'
 import '../styles/Dashboard.css'
 
 const STATUS_COPY = {
@@ -83,9 +84,16 @@ const getStatusClass = (status) => {
   return `dashboard-badge dashboard-badge-${normalized}`
 }
 
+const getAnnouncementItems = (notifications) => {
+  if (notifications.length <= 1) return notifications
+  return [...notifications, ...notifications]
+}
+
 function Dashboard() {
   const navigate = useNavigate()
   const user = useSelector((state) => state.auth.user)
+  const isAdmin = isAdminUser(user)
+  const isReportingManager = isReportingManagerUser(user)
 
   const { data: employeesData, isLoading: employeesLoading } = useGetEmployeesQuery()
   const { data: leavesData, isLoading: leavesLoading } = useGetLeavesQuery()
@@ -121,6 +129,13 @@ function Dashboard() {
     }
   })
 
+  const ownLeaves = normalizedLeaves.filter((leave) => String(leave.userId || '') === String(user?.rowid || ''))
+  const managedLeaves = normalizedLeaves.filter(
+    (leave) =>
+      String(leave.reportingManagerId || '') === String(user?.rowid || '') &&
+      String(leave.userId || '') !== String(user?.rowid || ''),
+  )
+
   const approvedLeaves = normalizedLeaves.filter((leave) => leave.status === 'approved')
   const pendingLeaves = normalizedLeaves.filter((leave) => leave.status === 'pending')
   const activeLeaves = approvedLeaves.filter((leave) => {
@@ -137,6 +152,8 @@ function Dashboard() {
       return left - right
     })
     .slice(0, 5)
+
+  const announcementItems = getAnnouncementItems(notifications.slice(0, 4))
 
   const upcomingHolidays = holidays
     .map((holiday) => ({
@@ -173,44 +190,85 @@ function Dashboard() {
     return parsed.getMonth() === currentMonth && parsed.getFullYear() === currentYear
   }).length
 
-  const dashboardStats = [
-    {
-      title: 'Total Employees',
-      value: employees.length,
-      caption: `${currentMonthJoiners} joined this month`,
-      icon: 'pi-users',
-      accent: 'teal',
-      action: () => navigate('/employees'),
-      actionLabel: 'View employees',
-    },
-    {
-      title: 'Pending Approvals',
-      value: pendingLeaves.length,
-      caption: pendingLeaves.length ? 'Needs review in approvals' : 'No pending requests',
-      icon: 'pi-inbox',
-      accent: 'amber',
-      action: () => navigate('/approvals'),
-      actionLabel: 'Open approvals',
-    },
-    {
-      title: 'Employees On Leave',
-      value: activeLeaves.length,
-      caption: activeLeaves.length ? 'Active approved leave today' : 'Everyone is currently available',
-      icon: 'pi-calendar-clock',
-      accent: 'blue',
-      action: () => navigate('/approvals'),
-      actionLabel: 'See leave activity',
-    },
-    {
-      title: 'Leave Policies',
-      value: leaveTypes.length,
-      caption: leaveTypes.length ? 'Configured leave types in settings' : 'No leave type configured',
-      icon: 'pi-briefcase',
-      accent: 'rose',
-      action: () => navigate('/settings/leave-types'),
-      actionLabel: 'Manage leave types',
-    },
-  ]
+  const dashboardStats = isAdmin
+    ? [
+        {
+          title: 'Total Employees',
+          value: employees.length,
+          caption: `${currentMonthJoiners} joined this month`,
+          icon: 'pi-users',
+          accent: 'teal',
+          action: () => navigate('/employees'),
+          actionLabel: 'View employees',
+        },
+        {
+          title: 'Pending Approvals',
+          value: pendingLeaves.length,
+          caption: pendingLeaves.length ? 'Needs review in approvals' : 'No pending requests',
+          icon: 'pi-inbox',
+          accent: 'amber',
+          action: () => navigate('/approvals'),
+          actionLabel: 'Open approvals',
+        },
+        {
+          title: 'Employees On Leave',
+          value: activeLeaves.length,
+          caption: activeLeaves.length ? 'Active approved leave today' : 'Everyone is currently available',
+          icon: 'pi-calendar-clock',
+          accent: 'blue',
+          action: () => navigate('/approvals'),
+          actionLabel: 'See leave activity',
+        },
+        {
+          title: 'Leave Policies',
+          value: leaveTypes.length,
+          caption: leaveTypes.length ? 'Configured leave types in settings' : 'No leave type configured',
+          icon: 'pi-briefcase',
+          accent: 'rose',
+          action: () => navigate('/settings/leave-types'),
+          actionLabel: 'Manage leave types',
+        },
+      ]
+    : [
+        {
+          title: 'My Profile',
+          value: employees.length ? 'Ready' : 'Pending',
+          caption: employees.length ? 'Your profile details are available' : 'Profile details are not available',
+          icon: 'pi-user',
+          accent: 'teal',
+          action: () => navigate('/employees'),
+          actionLabel: 'Open profile',
+        },
+        {
+          title: 'My Leaves',
+          value: ownLeaves.length,
+          caption: ownLeaves.length ? 'Your leave requests in the system' : 'No leave requests yet',
+          icon: 'pi-calendar',
+          accent: 'amber',
+          action: () => navigate('/approvals'),
+          actionLabel: 'View my leaves',
+        },
+        {
+          title: isReportingManager ? 'Team Pending' : 'Pending Leaves',
+          value: isReportingManager
+            ? managedLeaves.filter((leave) => leave.status === 'pending').length
+            : ownLeaves.filter((leave) => leave.status === 'pending').length,
+          caption: isReportingManager ? 'Assigned requests waiting for review' : 'Your requests awaiting action',
+          icon: 'pi-inbox',
+          accent: 'blue',
+          action: () => navigate('/approvals'),
+          actionLabel: isReportingManager ? 'Open assigned requests' : 'Open my requests',
+        },
+        {
+          title: 'Visible Leave Activity',
+          value: normalizedLeaves.length,
+          caption: isReportingManager ? 'Own plus assigned employee leave records' : 'Your leave records only',
+          icon: 'pi-briefcase',
+          accent: 'rose',
+          action: () => navigate('/approvals'),
+          actionLabel: 'Open leave activity',
+        },
+      ]
 
   return (
     <div className="dashboard-page">
@@ -218,18 +276,21 @@ function Dashboard() {
         <div className="dashboard-hero-copy">
           <span className="dashboard-eyebrow">Live Workforce Snapshot</span>
           <h2>
-            Welcome back, {user?.username || user?.email?.split('@')[0] || 'Team Member'}
+            Welcome back, {getUserDisplayName(user)}
           </h2>
           <p>
-            Keep an eye on approvals, availability, announcements, and upcoming dates from one
-            place.
+            {isAdmin
+              ? 'Keep an eye on approvals, availability, announcements, and upcoming dates from one place.'
+              : isReportingManager
+                ? 'Track your own leave activity along with requests assigned to you for review.'
+                : 'Track your profile, leave requests, and upcoming workplace updates from one place.'}
           </p>
           <div className="dashboard-hero-actions">
             <button type="button" className="dashboard-cta-primary" onClick={() => navigate('/approvals')}>
-              Review Approvals
+              {isAdmin || isReportingManager ? 'Review Leaves' : 'My Leave Requests'}
             </button>
             <button type="button" className="dashboard-cta-secondary" onClick={() => navigate('/employees')}>
-              Employee Directory
+              {isAdmin ? 'Employee Directory' : 'My Profile'}
             </button>
           </div>
         </div>
@@ -349,13 +410,15 @@ function Dashboard() {
               <span className="dashboard-panel-kicker">Broadcasts</span>
               <h3>Announcements</h3>
             </div>
-            <button
-              type="button"
-              className="dashboard-text-link"
-              onClick={() => navigate('/settings/announcements')}
-            >
-              Manage
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="dashboard-text-link"
+                onClick={() => navigate('/settings/announcements')}
+              >
+                Manage
+              </button>
+            ) : null}
           </div>
 
           {notificationsLoading ? (
@@ -363,24 +426,28 @@ function Dashboard() {
           ) : notifications.length === 0 ? (
             <div className="dashboard-empty">No announcements published yet.</div>
           ) : (
-            <div className="dashboard-announcement-list">
-              {notifications.slice(0, 4).map((item) => (
-                <a
-                  key={item.id}
-                  className="dashboard-announcement-item"
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <div className="dashboard-announcement-icon">
-                    <i className="pi pi-megaphone" />
-                  </div>
-                  <div>
-                    <strong>{item.title || 'Announcement'}</strong>
-                    <span>{item.url}</span>
-                  </div>
-                </a>
-              ))}
+            <div className="dashboard-announcement-carousel">
+              <div
+                className={`dashboard-announcement-track ${notifications.length > 1 ? 'is-animated' : ''}`}
+              >
+                {announcementItems.map((item, index) => (
+                  <a
+                    key={`${item.id}-${index}`}
+                    className="dashboard-announcement-item"
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <div className="dashboard-announcement-icon">
+                      <i className="pi pi-megaphone" />
+                    </div>
+                    <div>
+                      <strong>{item.title || 'Announcement'}</strong>
+                      <span>{item.url}</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           )}
         </article>
@@ -391,9 +458,11 @@ function Dashboard() {
               <span className="dashboard-panel-kicker">Calendar Watch</span>
               <h3>Upcoming Holidays</h3>
             </div>
-            <button type="button" className="dashboard-text-link" onClick={() => navigate('/settings/holidays')}>
-              Manage
-            </button>
+            {isAdmin ? (
+              <button type="button" className="dashboard-text-link" onClick={() => navigate('/settings/holidays')}>
+                Manage
+              </button>
+            ) : null}
           </div>
 
           {holidaysLoading ? (

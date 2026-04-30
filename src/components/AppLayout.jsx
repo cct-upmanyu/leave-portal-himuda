@@ -5,6 +5,7 @@ import '../styles/Layout.css'
 import { authApi, useLogoutMutation } from '../redux/api/authapi'
 import { clearUser, setForcedLogout } from '../redux/slices/authSlice'
 import { clearAuthToken } from '../utils/authToken'
+import { getUserDisplayName, getUserRoleLabel, isAdminUser } from '../utils/access'
 
 const getTitle = (pathname) => {
   if (pathname.startsWith('/settings')) {
@@ -28,6 +29,7 @@ function AppLayout() {
   const dispatch = useDispatch()
   const [logout, { isLoading }] = useLogoutMutation()
   const user = useSelector((state) => state.auth.user)
+  const isAdmin = isAdminUser(user)
 
   const handleLogout = async () => {
     try {
@@ -54,8 +56,8 @@ function AppLayout() {
             <div className="topbar-user">
               <div className="avatar">A</div>
               <div>
-                <div className="user-name">{user?.username || user?.email || 'User'}</div>
-                <div className="user-role">Employee</div>
+                <div className="user-name">{getUserDisplayName(user)}</div>
+                <div className="user-role">{getUserRoleLabel(user)}</div>
               </div>
             </div>
             <button className="btn-logout" onClick={handleLogout} disabled={isLoading}>
