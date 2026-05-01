@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useMeQuery } from '../redux/api/authapi'
+import AuthScreenLoader from './AuthScreenLoader'
 import {
   clearForcedLogout,
   clearUser,
@@ -27,12 +28,14 @@ function AuthInitializer({ children }) {
   })
   const isPublicRoute = location.pathname === '/login' || location.pathname === '/test'
   const isUnauthorized = isError && (error?.status === 401 || error?.status === 403)
+  const shouldRestoreSession = Boolean(token) && !user && !forcedLogout
+  const showAuthLoader = shouldRestoreSession && (isLoading || (!isSuccess && !isError))
 
   useEffect(() => {
-    if (isLoading) {
+    if (showAuthLoader) {
       dispatch(setAuthLoading())
     }
-  }, [dispatch, isLoading])
+  }, [dispatch, showAuthLoader])
 
   useEffect(() => {
     if (forcedLogout) {
@@ -75,6 +78,10 @@ function AuthInitializer({ children }) {
       }
     }
   }, [data, dispatch, isPublicRoute, isSuccess, isUnauthorized, location.pathname, navigate, token])
+
+  if (showAuthLoader) {
+    return <AuthScreenLoader />
+  }
 
   return children
 }
