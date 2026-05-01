@@ -5,7 +5,7 @@ import {
   useGetLeavesQuery,
   useUpdateLeaveMutation,
 } from '../redux/api/leaveApi'
-import { useGetEmployeesQuery, useGetManagersQuery, useUpdateEmployeeMutation } from '../redux/api/employeeApi'
+import { useGetEmployeesQuery, useGetManagersQuery } from '../redux/api/employeeApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
 import { isAdminUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
@@ -123,7 +123,6 @@ function Approvals() {
   const { data: leaveTypeResponse } = useGetLeaveTypesQuery()
   const [createLeave, { isLoading: isCreating }] = useCreateLeaveMutation()
   const [updateLeave, { isLoading: isUpdating }] = useUpdateLeaveMutation()
-  const [updateEmployee, { isLoading: isAssigningManager }] = useUpdateEmployeeMutation()
 
   const leaves = leaveResponse?.data || []
   const employees = employeeResponse?.data || []
@@ -139,7 +138,6 @@ function Approvals() {
     () => new Map(leaveTypes.map((type) => [String(type.id), type])),
     [leaveTypes],
   )
-
   const normalizedLeaves = useMemo(
     () =>
       leaves.map((leave) => {
@@ -178,6 +176,22 @@ function Approvals() {
   const [assignManagerLeave, setAssignManagerLeave] = useState(null)
   const [selectedManagerId, setSelectedManagerId] = useState('')
   const [form, setForm] = useState(emptyForm)
+  const assignableManagers = useMemo(() => {
+    const employee = employeeMap.get(String(assignManagerLeave?.userId || ''))
+    const employeeUserId = getEmployeeUserId(employee) || String(assignManagerLeave?.userId || '')
+
+    return managers.filter((manager) => {
+      if (String(manager.role_id || '') === '1') {
+        return false
+      }
+
+      if (employeeUserId && String(manager.id || '') === employeeUserId) {
+        return false
+      }
+
+      return true
+    })
+  }, [assignManagerLeave, employeeMap, managers])
 
   const leaveDateOptions = useMemo(
     () => getLeaveDateOptions(form.startDate, form.endDate),
@@ -287,10 +301,8 @@ function Approvals() {
 
   const handleAssignManager = async (event) => {
     event.preventDefault()
-    const employeeRecord = employees.find((employee) => String(employee.emp_id || employee.id || '') === String(assignManagerLeave?.userId || ''))
-    const employeeId = employeeRecord?.id || assignManagerLeave?.employeeDetailId
 
-    if (!employeeId || !selectedManagerId) {
+    if (!assignManagerLeave?.id || !selectedManagerId) {
       toastService.show({
         severity: 'warn',
         summary: 'Selection required',
@@ -300,7 +312,7 @@ function Approvals() {
       return
     }
 
-    await updateEmployee({ id: employeeId, reporting_manager: selectedManagerId }).unwrap()
+    await updateLeave({ id: assignManagerLeave.id, reportingManagerId: selectedManagerId }).unwrap()
     setAssignManagerLeave(null)
     setSelectedManagerId('')
   }
@@ -830,15 +842,13 @@ function Approvals() {
                   required
                 >
                   <option value="">Select reporting manager</option>
-                  {managers
-                    .filter((manager) => String(manager.id || '') !== String(assignManagerLeave.userId || ''))
-                    .map((manager) => (
-                      <option key={manager.id} value={manager.id}>
-                        {[manager.first_name, manager.last_name].filter(Boolean).join(' ').trim() ||
-                          manager.user_name ||
-                          manager.email}
-                      </option>
-                    ))}
+                  {assignableManagers.map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {[manager.first_name, manager.last_name].filter(Boolean).join(' ').trim() ||
+                        manager.user_name ||
+                        manager.email}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -846,8 +856,8 @@ function Approvals() {
                 <button type="button" className="approval-secondary-btn" onClick={() => setAssignManagerLeave(null)}>
                   Cancel
                 </button>
-                <button type="submit" className="approvals-primary-btn" disabled={isAssigningManager}>
-                  {isAssigningManager ? 'Assigning...' : 'Assign Manager'}
+                <button type="submit" className="approvals-primary-btn" disabled={isUpdating}>
+                  {isUpdating ? 'Assigning...' : 'Assign Manager'}
                 </button>
               </div>
             </form>

@@ -37,6 +37,13 @@ export const employeeApi = createApi({
       }),
       invalidatesTags: ['Employees'],
     }),
+    changeEmployeePassword: builder.mutation({
+      query: ({ id, ...payload }) => ({
+        url: `/api/employees/${id}/change-password`,
+        method: 'POST',
+        body: payload,
+      }),
+    }),
     getManagers: builder.query({
       query: () => '/api/employees/managers',
       providesTags: ['Managers'],
@@ -50,5 +57,6 @@ export const {
   useCreateEmployeeMutation,
   useUpdateEmployeeMutation,
   useDeleteEmployeeMutation,
+  useChangeEmployeePasswordMutation,
   useGetManagersQuery,
 } = employeeApi

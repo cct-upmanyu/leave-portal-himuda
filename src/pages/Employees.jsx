@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
 import {
+  useChangeEmployeePasswordMutation,
   useCreateEmployeeMutation,
   useDeleteEmployeeMutation,
   useGetEmployeesQuery,
@@ -93,6 +94,9 @@ const formatEmployeeCode = (employee) => {
   return `EPID${digits.padStart(5, '0')}`
 }
 
+const getEmployeeUserId = (employee) =>
+  String(employee?.emp_id || employee?.employeeUserId || employee?.rowid || employee?.id || '')
+
 const buildInitialFormData = (employee) => {
   if (!employee) {
     return initialFormState
@@ -137,9 +141,12 @@ function Employees() {
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState(null)
+  const [passwordEmployee, setPasswordEmployee] = useState(null)
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirm_password: '' })
   const [formData, setFormData] = useState(initialFormState)
   const [sameAddress, setSameAddress] = useState(false)
   const [formError, setFormError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   const { data: employeesData, isLoading, isFetching } = useGetEmployeesQuery()
   const { data: departmentsData } = useGetLookupsQuery('departments')
@@ -150,6 +157,8 @@ function Employees() {
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation()
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
   const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation()
+  const [changeEmployeePassword, { isLoading: isChangingPassword }] =
+    useChangeEmployeePasswordMutation()
 
   const branchTable = formData.branch_type || null
   const { data: branchData } = useGetLookupsQuery(branchTable, {
@@ -172,6 +181,21 @@ function Employees() {
     () => new Map(designations.map((item) => [String(item.id), item.name])),
     [designations],
   )
+  const assignableManagers = useMemo(() => {
+    const employeeUserId = getEmployeeUserId(editingEmployee)
+
+    return managers.filter((manager) => {
+      if (String(manager.role_id || '') === '1') {
+        return false
+      }
+
+      if (employeeUserId && String(manager.id || '') === employeeUserId) {
+        return false
+      }
+
+      return true
+    })
+  }, [editingEmployee, managers])
 
   useEffect(() => {
     const closeMenu = () => setMenuOpenId(null)
@@ -251,6 +275,19 @@ function Employees() {
     setFormError('')
   }
 
+  const openPasswordModal = (employee) => {
+    setPasswordEmployee(employee)
+    setPasswordForm({ password: '', confirm_password: '' })
+    setPasswordError('')
+    setMenuOpenId(null)
+  }
+
+  const closePasswordModal = () => {
+    setPasswordEmployee(null)
+    setPasswordForm({ password: '', confirm_password: '' })
+    setPasswordError('')
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => {
@@ -274,6 +311,11 @@ function Employees() {
     const checked = e.target.checked
     setSameAddress(checked)
     setFormData((prev) => (checked ? syncAddressFields(prev) : prev))
+  }
+
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target
+    setPasswordForm((prev) => ({ ...prev, [name]: value }))
   }
 
   const getEmployeePayload = (isEditing) => {
@@ -318,6 +360,39 @@ function Employees() {
       await deleteEmployee(employee.id).unwrap()
     } catch (_) {
       // Toasts are already handled centrally by the base query.
+    }
+  }
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+
+    if (!passwordForm.password) {
+      setPasswordError('Password is required.')
+      return
+    }
+    if (passwordForm.password.length < 6) {
+      setPasswordError('Password must be at least 6 characters.')
+      return
+    }
+    if (passwordForm.password !== passwordForm.confirm_password) {
+      setPasswordError('Password and confirm password must match.')
+      return
+    }
+    if (!passwordEmployee?.id) {
+      setPasswordError('Employee record not found.')
+      return
+    }
+
+    try {
+      await changeEmployeePassword({
+        id: passwordEmployee.id,
+        password: passwordForm.password,
+        confirm_password: passwordForm.confirm_password,
+      }).unwrap()
+      closePasswordModal()
+    } catch (error) {
+      setPasswordError(error?.data?.error || 'Failed to change password.')
     }
   }
 
@@ -652,6 +727,9 @@ function Employees() {
                               <button type="button" onClick={() => openEditModal(employee)}>
                                 Edit
                               </button>
+                              <button type="button" onClick={() => openPasswordModal(employee)}>
+                                Change Password
+                              </button>
                               <button
                                 type="button"
                                 className="danger"
@@ -682,6 +760,67 @@ function Employees() {
           {(isLoading || isFetching) && <div className="employee-empty">Loading employees...</div>}
         </div>
       </div>
+      )}
+
+      {isAdmin && passwordEmployee && (
+        <div className="employee-modal-backdrop" onClick={closePasswordModal}>
+          <div
+            className="employee-modal employee-password-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="employee-modal-header">
+              <div>
+                <h3>Change Password</h3>
+                <p>
+                  Reset password for{' '}
+                  {`${passwordEmployee.first_name || ''} ${passwordEmployee.last_name || ''}`.trim() ||
+                    passwordEmployee.user_name ||
+                    'this employee'}
+                  .
+                </p>
+              </div>
+              <button type="button" className="employee-modal-close" onClick={closePasswordModal}>
+                x
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit}>
+              <div className="form-group">
+                <label>New Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={passwordForm.password}
+                  onChange={handlePasswordInputChange}
+                  placeholder="Enter new password"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm Password *</label>
+                <input
+                  type="password"
+                  name="confirm_password"
+                  value={passwordForm.confirm_password}
+                  onChange={handlePasswordInputChange}
+                  placeholder="Confirm new password"
+                  required
+                />
+              </div>
+
+              {passwordError && <div className="form-error">{passwordError}</div>}
+
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={closePasswordModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isChangingPassword}>
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {isAdmin && isFormOpen && (
@@ -869,7 +1008,7 @@ function Employees() {
                       onChange={handleInputChange}
                     >
                       <option value="">Reporting Manager</option>
-                      {managers.map((item) => (
+                      {assignableManagers.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.first_name || ''} {item.last_name || ''} ({item.user_name || item.email})
                         </option>
