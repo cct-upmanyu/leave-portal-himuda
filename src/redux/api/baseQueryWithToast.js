@@ -14,8 +14,8 @@ const rawBaseQuery = fetchBaseQuery({
       headers.set('Content-Type', 'application/json')
     }
 
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`)
+    if (token && !headers.has('x-access-token')) {
+      headers.set('x-access-token', token)
     }
 
     return headers
