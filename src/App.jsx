@@ -8,6 +8,7 @@ import SettingsLayout from './pages/SettingsLayout'
 import SettingsLookupPage from './pages/SettingsLookupPage'
 import Test from './pages/Test'
 import Employees from './pages/Employees'
+import EmployeeDetail from './pages/EmployeeDetail'
 import Approvals from './pages/Approvals'
 import './App.css'
 
@@ -26,6 +27,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/approvals" element={<Approvals />} />
         <Route path="/employees" element={<Employees />} />
+        <Route path="/employees/:id" element={<EmployeeDetail />} />
         <Route path="/work-diary" element={<ComingSoon title="Work Diary" />} />
 
         <Route

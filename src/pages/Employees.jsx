@@ -1,6 +1,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
 import {
   useChangeEmployeePasswordMutation,
@@ -135,6 +136,7 @@ const buildInitialFormData = (employee) => {
 }
 
 function Employees() {
+  const navigate = useNavigate()
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
   const [searchTerm, setSearchTerm] = useState('')
@@ -704,7 +706,15 @@ function Employees() {
                 const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || '-'
                 return (
                   <tr key={employee.id}>
-                    <td className="employee-code">{formatEmployeeCode(employee)}</td>
+                    <td className="employee-code">
+                      <button
+                        type="button"
+                        className="employee-id-link"
+                        onClick={() => navigate(`/employees/${employee.id}`)}
+                      >
+                        {formatEmployeeCode(employee)}
+                      </button>
+                    </td>
                     <td>{fullName}</td>
                     <td>{departmentMap.get(String(employee.department_id || '')) || '-'}</td>
                     <td>{formatDisplayDate(employee.date_of_joining)}</td>
