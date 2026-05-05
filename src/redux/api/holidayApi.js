@@ -7,7 +7,10 @@ export const holidayApi = createApi({
   tagTypes: ['Holiday'],
   endpoints: (builder) => ({
     getHolidays: builder.query({
-      query: () => '/api/holidays',
+      query: (year) => ({
+        url: '/api/holidays',
+        params: year ? { year } : undefined,
+      }),
       providesTags: (result) =>
         result?.data
           ? [

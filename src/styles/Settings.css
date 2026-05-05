@@ -60,6 +60,8 @@
 
 .settings-form {
   display: flex;
+  align-items: center;
+  gap: 1rem;
   justify-content: flex-end;
   margin-bottom: 1rem;
 }
@@ -72,6 +74,41 @@
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+
+.settings-year-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 999px;
+  background: #3b7696;
+  box-shadow: 0 8px 18px rgba(59, 118, 150, 0.22);
+}
+
+.settings-year-nav {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.settings-year-nav:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.settings-year-value {
+  min-width: 70px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
 }
 
 .settings-error {
@@ -546,6 +583,11 @@
   .settings-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .settings-form {
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
 
   .settings-table-head,

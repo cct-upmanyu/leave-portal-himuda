@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calendar } from 'primereact/calendar'
 import { Dropdown } from 'primereact/dropdown'
 import {
@@ -14,16 +14,33 @@ const getErrorMessage = (err) => {
   return err?.data?.error || err?.error || 'Something went wrong.'
 }
 
+const getCurrentYear = () => new Date().getFullYear()
+
+const getYearDate = (year, month = 0, day = 1) => new Date(year, month, day)
+
 const toDateObject = (value) => {
   if (!value) return null
   if (value instanceof Date) return value
+  if (typeof value === 'string') {
+    const parts = value.split('-')
+    if (parts.length === 3) {
+      const [year, month, day] = parts.map(Number)
+      const parsed = getYearDate(year, month - 1, day)
+      return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
+  }
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 const toApiDate = (value) => {
   if (!value) return ''
-  if (value instanceof Date) return value.toISOString().split('T')[0]
+  if (value instanceof Date) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
   return value
 }
 
@@ -38,8 +55,16 @@ const formatDate = (value) => {
   })
 }
 
+const alignDateToYear = (value, year) => {
+  if (!value) return null
+  const dateObj = toDateObject(value)
+  if (!dateObj) return null
+  return getYearDate(year, dateObj.getMonth(), dateObj.getDate())
+}
+
 function HolidayManager() {
-  const { data, isLoading, isError, error } = useGetHolidaysQuery()
+  const [selectedYear, setSelectedYear] = useState(getCurrentYear)
+  const { data, isLoading, isError, error } = useGetHolidaysQuery(selectedYear)
   const { data: typeData, isLoading: isTypeLoading } = useGetLookupsQuery('holiday_type')
   const [createHoliday, { isLoading: isCreating }] = useCreateHolidayMutation()
   const [updateHoliday, { isLoading: isUpdating }] = useUpdateHolidayMutation()
@@ -73,6 +98,18 @@ function HolidayManager() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const yearMinDate = useMemo(() => getYearDate(selectedYear, 0, 1), [selectedYear])
+  const yearMaxDate = useMemo(() => getYearDate(selectedYear, 11, 31), [selectedYear])
+  const yearViewDate = useMemo(() => getYearDate(selectedYear, 0, 1), [selectedYear])
+
+  useEffect(() => {
+    setOpenMenuId(null)
+    setFormError('')
+    setFormState((prev) => ({
+      ...prev,
+      holidayDate: alignDateToYear(prev.holidayDate, selectedYear),
+    }))
+  }, [selectedYear])
 
   const resetForm = () => {
     setFormState({ name: '', holidayTypeId: '', holidayDate: null })
@@ -177,6 +214,25 @@ function HolidayManager() {
       </div>
 
       <div className="settings-form">
+        <div className="settings-year-switcher" aria-label="Holiday year selector">
+          <button
+            type="button"
+            className="settings-year-nav"
+            onClick={() => setSelectedYear((prev) => prev - 1)}
+            aria-label="Show previous year"
+          >
+            <i className="pi pi-angle-left" />
+          </button>
+          <span className="settings-year-value">{selectedYear}</span>
+          <button
+            type="button"
+            className="settings-year-nav"
+            onClick={() => setSelectedYear((prev) => prev + 1)}
+            aria-label="Show next year"
+          >
+            <i className="pi pi-angle-right" />
+          </button>
+        </div>
         <button type="button" onClick={openAdd}>
           Add Holiday
         </button>
@@ -196,7 +252,7 @@ function HolidayManager() {
           {isLoading ? (
             <div className="settings-empty">Loading...</div>
           ) : items.length === 0 ? (
-            <div className="settings-empty">No holidays added yet.</div>
+            <div className="settings-empty">No holidays added for {selectedYear}.</div>
           ) : (
             items.map((item, index) => (
               <div key={item.id} className="settings-table-row">
@@ -263,6 +319,9 @@ function HolidayManager() {
                   setFormState((prev) => ({ ...prev, holidayDate: e.value }))
                 }
                 dateFormat="dd M yy"
+                minDate={yearMinDate}
+                maxDate={yearMaxDate}
+                viewDate={yearViewDate}
                 showIcon
                 className="modal-calendar"
               />
@@ -305,6 +364,9 @@ function HolidayManager() {
                 setFormState((prev) => ({ ...prev, holidayDate: e.value }))
               }
               dateFormat="dd M yy"
+              minDate={yearMinDate}
+              maxDate={yearMaxDate}
+              viewDate={yearViewDate}
               showIcon
               className="modal-calendar"
             />
