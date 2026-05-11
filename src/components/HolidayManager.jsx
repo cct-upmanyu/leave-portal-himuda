@@ -297,34 +297,44 @@ function HolidayManager() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Add Holiday</h3>
             <p>Provide holiday details to add it to the calendar.</p>
-            <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                value={formState.name}
-                onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Holiday name"
-              />
-              <Dropdown
-                value={formState.holidayTypeId}
-                options={typeOptions}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, holidayTypeId: e.value }))
-                }
-                placeholder={isTypeLoading ? 'Loading types...' : 'Select holiday type'}
-                className="modal-dropdown"
-              />
-              <Calendar
-                value={formState.holidayDate}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, holidayDate: e.value }))
-                }
-                dateFormat="dd M yy"
-                minDate={yearMinDate}
-                maxDate={yearMaxDate}
-                viewDate={yearViewDate}
-                showIcon
-                className="modal-calendar"
-              />
+            <form className="modal-form" onSubmit={handleSubmit}>
+              <label className="modal-field">
+                <span>Holiday Name</span>
+                <input
+                  type="text"
+                  value={formState.name}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter holiday name"
+                />
+              </label>
+              <label className="modal-field">
+                <span>Holiday Type</span>
+                <Dropdown
+                  value={formState.holidayTypeId}
+                  options={typeOptions}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, holidayTypeId: e.value }))
+                  }
+                  placeholder={isTypeLoading ? 'Loading types...' : 'Select holiday type'}
+                  className="modal-dropdown"
+                />
+              </label>
+              <label className="modal-field">
+                <span>Holiday Date</span>
+                <Calendar
+                  value={formState.holidayDate}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, holidayDate: e.value }))
+                  }
+                  dateFormat="dd M yy"
+                  minDate={yearMinDate}
+                  maxDate={yearMaxDate}
+                  viewDate={yearViewDate}
+                  showIcon
+                  className="modal-calendar"
+                />
+              </label>
+              <div className="modal-year-hint">Holiday will be saved in year {selectedYear}.</div>
               <div className="modal-actions">
                 <button type="button" className="ghost" onClick={() => setIsAddOpen(false)}>
                   Cancel
@@ -343,33 +353,45 @@ function HolidayManager() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Edit Holiday</h3>
             <p>Update the holiday details and save.</p>
-            <input
-              type="text"
-              value={formState.name}
-              onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Holiday name"
-            />
-            <Dropdown
-              value={formState.holidayTypeId}
-              options={typeOptions}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, holidayTypeId: e.value }))
-              }
-              placeholder={isTypeLoading ? 'Loading types...' : 'Select holiday type'}
-              className="modal-dropdown"
-            />
-            <Calendar
-              value={formState.holidayDate}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, holidayDate: e.value }))
-              }
-              dateFormat="dd M yy"
-              minDate={yearMinDate}
-              maxDate={yearMaxDate}
-              viewDate={yearViewDate}
-              showIcon
-              className="modal-calendar"
-            />
+            <div className="modal-form">
+              <label className="modal-field">
+                <span>Holiday Name</span>
+                <input
+                  type="text"
+                  value={formState.name}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter holiday name"
+                />
+              </label>
+              <label className="modal-field">
+                <span>Holiday Type</span>
+                <Dropdown
+                  value={formState.holidayTypeId}
+                  options={typeOptions}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, holidayTypeId: e.value }))
+                  }
+                  placeholder={isTypeLoading ? 'Loading types...' : 'Select holiday type'}
+                  className="modal-dropdown"
+                />
+              </label>
+              <label className="modal-field">
+                <span>Holiday Date</span>
+                <Calendar
+                  value={formState.holidayDate}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, holidayDate: e.value }))
+                  }
+                  dateFormat="dd M yy"
+                  minDate={yearMinDate}
+                  maxDate={yearMaxDate}
+                  viewDate={yearViewDate}
+                  showIcon
+                  className="modal-calendar"
+                />
+              </label>
+              <div className="modal-year-hint">Holiday will stay in year {selectedYear}.</div>
+            </div>
             <div className="modal-actions">
               <button type="button" className="ghost" onClick={closeEdit}>
                 Cancel

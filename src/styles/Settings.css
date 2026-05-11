@@ -610,35 +610,104 @@
 }
 
 .modal {
-  width: min(420px, 92vw);
+  width: min(460px, 92vw);
   background: var(--surface);
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 20px;
+  padding: 1.6rem;
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
 }
 
 .modal h3 {
+  font-size: 1.85rem;
   margin-bottom: 0.5rem;
 }
 
 .modal p {
   color: var(--text-muted);
-  margin-bottom: 1rem;
+  line-height: 1.55;
+  margin-bottom: 1.25rem;
 }
 
-.modal input {
+.modal-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.modal-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.modal-field span {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1f2a37;
+  letter-spacing: 0.01em;
+}
+
+.modal input,
+.modal .p-dropdown,
+.modal .p-calendar .p-inputtext {
   width: 100%;
-  padding: 0.7rem 0.9rem;
-  border-radius: 10px;
+  min-height: 48px;
+  padding: 0.75rem 0.95rem;
+  border-radius: 12px;
   border: 1px solid #d7dee7;
   font-family: inherit;
-  margin-bottom: 1rem;
+  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.modal input:focus,
+.modal .p-inputtext:focus,
+.modal .p-dropdown:not(.p-disabled).p-focus {
+  border-color: #3b7696;
+  box-shadow: 0 0 0 3px rgba(59, 118, 150, 0.14);
+  outline: none;
 }
 
 .modal .modal-dropdown,
 .modal .modal-calendar {
   width: 100%;
-  margin-bottom: 1rem;
+}
+
+.modal .p-dropdown {
+  display: flex;
+  align-items: center;
+  padding: 0 0.95rem;
+}
+
+.modal .p-dropdown .p-dropdown-label {
+  padding: 0;
+  color: #1f2a37;
+}
+
+.modal .p-calendar {
+  width: 100%;
+}
+
+.modal .p-calendar .p-inputtext {
+  padding-right: 3.2rem;
+}
+
+.modal .p-calendar .p-datepicker-trigger {
+  width: 48px;
+  border: none;
+  border-left: 1px solid #e2e8f0;
+  border-radius: 0 12px 12px 0;
+  background: #f8fafc;
+  color: #3b7696;
+}
+
+.modal-year-hint {
+  margin-top: -0.1rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  background: #f4f8fb;
+  color: #4b5563;
+  font-size: 0.88rem;
 }
 
 .modal .p-dropdown,
@@ -648,11 +717,39 @@
 
 .modal-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.6rem;
+  margin-top: 0.35rem;
+}
+
+.modal-actions button {
+  min-width: 92px;
+  min-height: 46px;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
 }
 
 .modal-actions .ghost {
   background: #e5edf4;
   color: #1f2a37;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 1.25rem;
+  }
+
+  .modal h3 {
+    font-size: 1.55rem;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
 }
