@@ -58,6 +58,12 @@ const normalizeDate = (value) => {
   return parsed.toISOString().slice(0, 10)
 }
 
+const isAnnouncementActive = (notification, todayString) => {
+  const endDate = normalizeDate(notification?.endDate)
+  if (!endDate) return true
+  return endDate >= todayString
+}
+
 const getLocalDateString = (value = new Date()) => {
   const year = value.getFullYear()
   const month = String(value.getMonth() + 1).padStart(2, '0')
@@ -153,7 +159,8 @@ function Dashboard() {
     })
     .slice(0, 5)
 
-  const announcementItems = getAnnouncementItems(notifications.slice(0, 4))
+  const activeNotifications = notifications.filter((item) => isAnnouncementActive(item, todayString))
+  const announcementItems = getAnnouncementItems(activeNotifications.slice(0, 4))
 
   const upcomingHolidays = holidays
     .map((holiday) => ({
@@ -300,7 +307,7 @@ function Dashboard() {
           <div className="dashboard-hero-grid">
             <div>
               <span>Announcements</span>
-              <strong>{notifications.length}</strong>
+              <strong>{activeNotifications.length}</strong>
             </div>
             <div>
               <span>Upcoming Holidays</span>
@@ -423,12 +430,12 @@ function Dashboard() {
 
           {notificationsLoading ? (
             <div className="dashboard-empty">Loading announcements...</div>
-          ) : notifications.length === 0 ? (
+          ) : activeNotifications.length === 0 ? (
             <div className="dashboard-empty">No announcements published yet.</div>
           ) : (
             <div className="dashboard-announcement-carousel">
               <div
-                className={`dashboard-announcement-track ${notifications.length > 1 ? 'is-animated' : ''}`}
+                className={`dashboard-announcement-track ${activeNotifications.length > 1 ? 'is-animated' : ''}`}
               >
                 {announcementItems.map((item, index) => (
                   <a

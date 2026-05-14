@@ -111,6 +111,8 @@ const statusLabel = (status) => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
+const isPendingLeave = (leave) => String(leave?.status || 'pending').toLowerCase() === 'pending'
+
 const sortLeavesByStartDate = (records) =>
   [...records].sort((left, right) => String(right.startDate || '').localeCompare(String(left.startDate || '')))
 
@@ -171,10 +173,13 @@ function Approvals() {
   }, [normalizedLeaves])
 
   const [isApplyOpen, setIsApplyOpen] = useState(false)
+  const [editingLeave, setEditingLeave] = useState(null)
   const [activeMenuId, setActiveMenuId] = useState(null)
   const [selectedLeave, setSelectedLeave] = useState(null)
   const [assignManagerLeave, setAssignManagerLeave] = useState(null)
   const [selectedManagerId, setSelectedManagerId] = useState('')
+  const [rejectingLeave, setRejectingLeave] = useState(null)
+  const [rejectionNote, setRejectionNote] = useState('')
   const [form, setForm] = useState(emptyForm)
   const assignableManagers = useMemo(() => {
     const employee = employeeMap.get(String(assignManagerLeave?.userId || ''))
@@ -281,13 +286,53 @@ function Approvals() {
     setActiveMenuId(null)
   }
 
+  const canEditOwnLeave = (leave) =>
+    isPendingLeave(leave) &&
+    (isAdmin || String(leave?.userId || '') === String(user?.rowid || ''))
+
   const canManageLeave = (leave) =>
     isAdmin || (String(leave?.reportingManagerId || '') === String(user?.rowid || '') && String(leave?.userId || '') !== String(user?.rowid || ''))
 
+  const openEditLeaveModal = (leave) => {
+    if (!canEditOwnLeave(leave)) return
+
+    setEditingLeave(leave)
+    setForm({
+      employeeId: String(leave.userId || ''),
+      leaveTypeId: String(leave.leaveTypeId || ''),
+      startDate: String(leave.startDate || '').slice(0, 10),
+      endDate: String(leave.endDate || '').slice(0, 10),
+      halfLeave: Boolean(leave.halfLeave),
+      halfLeaveDate: leave.halfLeaveDate ? String(leave.halfLeaveDate).slice(0, 10) : '',
+      shortLeave: Boolean(leave.shortLeave),
+      shortLeaveDate: leave.shortLeaveDate ? String(leave.shortLeaveDate).slice(0, 10) : '',
+      reason: leave.reason || '',
+      outOfStation: leave.leaveStation === 'yes',
+      leaveDateTime: leave.dateTimeLeave || '',
+      returnDateTime: leave.dateTimeReturn || '',
+      absenceAddress: leave.addressDuringLeave || '',
+    })
+    setIsApplyOpen(true)
+    setActiveMenuId(null)
+  }
+
   const openAssignManagerModal = (leave) => {
+    if (!isPendingLeave(leave)) return
     setAssignManagerLeave(leave)
     setSelectedManagerId(String(leave?.reportingManagerId || ''))
     setActiveMenuId(null)
+  }
+
+  const openRejectModal = (leave) => {
+    if (!isPendingLeave(leave)) return
+    setRejectingLeave(leave)
+    setRejectionNote('')
+    setActiveMenuId(null)
+  }
+
+  const closeRejectModal = () => {
+    setRejectingLeave(null)
+    setRejectionNote('')
   }
 
   const handleStatusUpdate = async (leave, status) => {
@@ -297,6 +342,41 @@ function Approvals() {
     if (selectedLeave?.id === leave.id) {
       setSelectedLeave({ ...selectedLeave, status: nextStatus })
     }
+  }
+
+  const handleRejectSubmit = async (event) => {
+    event.preventDefault()
+
+    const note = rejectionNote.trim()
+    if (!note || !rejectingLeave?.id) {
+      toastService.show({
+        severity: 'warn',
+        summary: 'Reason required',
+        detail: 'Please enter a rejection reason before continuing.',
+        life: 2500,
+      })
+      return
+    }
+
+    await updateLeave({
+      id: rejectingLeave.id,
+      status: 'cancelled',
+      reason: note,
+    }).unwrap()
+
+    if (selectedLeave?.id === rejectingLeave.id) {
+      setSelectedLeave((current) =>
+        current
+          ? {
+              ...current,
+              status: 'cancelled',
+              reason: note,
+            }
+          : current,
+      )
+    }
+
+    closeRejectModal()
   }
 
   const handleAssignManager = async (event) => {
@@ -383,6 +463,7 @@ function Approvals() {
   }
 
   const openApplyModal = () => {
+    setEditingLeave(null)
     setForm((current) => ({
       ...emptyForm,
       employeeId: current.employeeId || getEmployeeUserId(employees[0]),
@@ -391,14 +472,17 @@ function Approvals() {
     setIsApplyOpen(true)
   }
 
-  const closeApplyModal = () => setIsApplyOpen(false)
+  const closeApplyModal = () => {
+    setIsApplyOpen(false)
+    setEditingLeave(null)
+  }
 
   const handleApplySubmit = async (event) => {
     event.preventDefault()
     const employee =
       employees.find((item) => getEmployeeUserId(item) === String(form.employeeId)) || null
 
-    await createLeave({
+    const payload = {
       userId: form.employeeId,
       leaveTypeId: form.leaveTypeId,
       reportingManagerId: employee?.reporting_manager || null,
@@ -419,9 +503,32 @@ function Approvals() {
       emergencyContactNumber: employee?.emergency_contact_number || '',
       days: duration.value,
       status: 'pending',
-    }).unwrap()
+    }
+
+    if (editingLeave?.id) {
+      await updateLeave({
+        id: editingLeave.id,
+        ...payload,
+      }).unwrap()
+
+      if (selectedLeave?.id === editingLeave.id) {
+        setSelectedLeave((current) =>
+          current
+            ? {
+                ...current,
+                ...payload,
+                leaveTypeName:
+                  leaveTypeMap.get(String(payload.leaveTypeId))?.name || current.leaveTypeName,
+              }
+            : current,
+        )
+      }
+    } else {
+      await createLeave(payload).unwrap()
+    }
 
     setIsApplyOpen(false)
+    setEditingLeave(null)
     setForm({
       ...emptyForm,
       employeeId: form.employeeId,
@@ -530,12 +637,17 @@ function Approvals() {
                             <button type="button" onClick={() => openLeaveDetails(leave)}>
                               View
                             </button>
-                            {isAdmin ? (
+                            {canEditOwnLeave(leave) ? (
+                              <button type="button" onClick={() => openEditLeaveModal(leave)}>
+                                Edit
+                              </button>
+                            ) : null}
+                            {isAdmin && isPendingLeave(leave) ? (
                               <button type="button" onClick={() => openAssignManagerModal(leave)}>
                                 Assign Reporting Manager
                               </button>
                             ) : null}
-                            {canManageLeave(leave) ? (
+                            {canManageLeave(leave) && isPendingLeave(leave) ? (
                               <>
                                 <button
                                   type="button"
@@ -546,7 +658,7 @@ function Approvals() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleStatusUpdate(leave, 'rejected')}
+                                  onClick={() => openRejectModal(leave)}
                                   disabled={isUpdating}
                                 >
                                   Reject
@@ -794,7 +906,16 @@ function Approvals() {
               <button type="button" className="approval-secondary-btn" onClick={() => setSelectedLeave(null)}>
                 Close
               </button>
-              {canManageLeave(selectedLeave) ? (
+              {canEditOwnLeave(selectedLeave) ? (
+                <button
+                  type="button"
+                  className="approvals-primary-btn"
+                  onClick={() => openEditLeaveModal(selectedLeave)}
+                >
+                  Edit
+                </button>
+              ) : null}
+              {canManageLeave(selectedLeave) && isPendingLeave(selectedLeave) ? (
                 <>
                   <button
                     type="button"
@@ -807,7 +928,7 @@ function Approvals() {
                   <button
                     type="button"
                     className="approval-reject-btn"
-                    onClick={() => handleStatusUpdate(selectedLeave, 'rejected')}
+                    onClick={() => openRejectModal(selectedLeave)}
                     disabled={isUpdating}
                   >
                     Reject
@@ -865,13 +986,63 @@ function Approvals() {
         </div>
       ) : null}
 
+      {rejectingLeave ? (
+        <div className="approval-overlay" onClick={closeRejectModal}>
+          <div className="approval-modal approval-compact-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="approval-modal-head">
+              <div>
+                <h3>Reject Leave</h3>
+                <p>Add the reason for rejecting this leave request.</p>
+              </div>
+              <button type="button" className="approval-close-btn" onClick={closeRejectModal}>
+                x
+              </button>
+            </div>
+
+            <form className="approval-form" onSubmit={handleRejectSubmit}>
+              <div className="approval-reject-summary">
+                <strong>{rejectingLeave.employeeName || '-'}</strong>
+                <span>
+                  {rejectingLeave.leaveTypeName} | {formatDate(rejectingLeave.startDate)} to {formatDate(rejectingLeave.endDate)}
+                </span>
+              </div>
+
+              <label>
+                <span>Rejection Reason</span>
+                <textarea
+                  name="rejectionReason"
+                  value={rejectionNote}
+                  onChange={(event) => setRejectionNote(event.target.value)}
+                  placeholder="Explain why this leave request is being rejected"
+                  rows={5}
+                  required
+                />
+              </label>
+
+              <div className="approval-modal-actions">
+                <button type="button" className="approval-secondary-btn" onClick={closeRejectModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="approval-reject-btn" disabled={isUpdating || !rejectionNote.trim()}>
+                  {isUpdating ? 'Rejecting...' : 'Submit Rejection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {isApplyOpen ? (
         <div className="approval-overlay" onClick={closeApplyModal}>
           <div className="approval-modal approval-form-modal" onClick={(event) => event.stopPropagation()}>
             <div className="approval-modal-head">
               <div>
-                <h3>Apply Leave</h3>
-                <p>Create a new leave request using the same approval workflow.</p>
+                <h3>{editingLeave ? 'Edit Leave' : 'Apply Leave'}</h3>
+                <p>
+                  {editingLeave
+                    ? 'Update your pending leave request.'
+                    : 'Create a new leave request using the same approval workflow.'}
+                </p>
               </div>
               <button type="button" className="approval-close-btn" onClick={closeApplyModal}>
                 x
@@ -882,7 +1053,13 @@ function Approvals() {
               <div className="approval-form-grid approval-form-grid-top">
                 <label>
                   <span>Employee</span>
-                  <select name="employeeId" value={form.employeeId} onChange={handleFormChange} required>
+                  <select
+                    name="employeeId"
+                    value={form.employeeId}
+                    onChange={handleFormChange}
+                    required
+                    disabled={Boolean(editingLeave) || !isAdmin}
+                  >
                     {employees.map((employee) => (
                       <option key={getEmployeeUserId(employee)} value={getEmployeeUserId(employee)}>
                         {getEmployeeName(employee)}
@@ -1071,8 +1248,12 @@ function Approvals() {
                 <button type="button" className="approval-secondary-btn" onClick={closeApplyModal}>
                   Cancel
                 </button>
-                <button type="submit" className="approvals-primary-btn" disabled={isCreating}>
-                  {isCreating ? 'Applying...' : 'Apply'}
+                <button
+                  type="submit"
+                  className="approvals-primary-btn"
+                  disabled={isCreating || isUpdating}
+                >
+                  {editingLeave ? (isUpdating ? 'Saving...' : 'Save Changes') : isCreating ? 'Applying...' : 'Apply'}
                 </button>
               </div>
             </form>

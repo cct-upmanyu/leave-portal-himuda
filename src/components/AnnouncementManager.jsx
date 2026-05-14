@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Calendar } from 'primereact/calendar'
 import {
   useCreateNotificationMutation,
   useDeleteNotificationMutation,
@@ -11,6 +12,42 @@ const getErrorMessage = (err) => {
   return err?.data?.error || err?.error || 'Something went wrong.'
 }
 
+const toDateObject = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [year, month, day] = raw.split('-').map(Number)
+      const parsed = new Date(year, month - 1, day)
+      return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const toApiDate = (value) => {
+  if (!value) return ''
+  if (value instanceof Date) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return value
+}
+
+const formatDate = (value) => {
+  const date = toDateObject(value)
+  if (!date) return '-'
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function AnnouncementManager() {
   const { data, isLoading, isError, error } = useGetNotificationsQuery()
   const [createNotification, { isLoading: isCreating }] = useCreateNotificationMutation()
@@ -19,7 +56,7 @@ function AnnouncementManager() {
 
   const items = data?.data || []
 
-  const [formState, setFormState] = useState({ title: '', url: '' })
+  const [formState, setFormState] = useState({ title: '', url: '', endDate: null })
   const [editingId, setEditingId] = useState(null)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -27,7 +64,7 @@ function AnnouncementManager() {
   const [openMenuId, setOpenMenuId] = useState(null)
 
   const resetForm = () => {
-    setFormState({ title: '', url: '' })
+    setFormState({ title: '', url: '', endDate: null })
     setFormError('')
   }
 
@@ -38,7 +75,7 @@ function AnnouncementManager() {
 
   const openEdit = (item) => {
     setEditingId(item.id)
-    setFormState({ title: item.title || '', url: item.url || '' })
+    setFormState({ title: item.title || '', url: item.url || '', endDate: toDateObject(item.endDate) })
     setFormError('')
     setIsEditOpen(true)
     setOpenMenuId(null)
@@ -54,6 +91,7 @@ function AnnouncementManager() {
   const validateForm = () => {
     if (!formState.title.trim()) return 'Announcement is required.'
     if (!formState.url.trim()) return 'URL is required.'
+    if (!formState.endDate) return 'Expiry date is required.'
     return ''
   }
 
@@ -69,6 +107,7 @@ function AnnouncementManager() {
       await createNotification({
         title: formState.title.trim(),
         url: formState.url.trim(),
+        endDate: toApiDate(formState.endDate),
       }).unwrap()
       setIsAddOpen(false)
       resetForm()
@@ -89,6 +128,7 @@ function AnnouncementManager() {
         id: editingId,
         title: formState.title.trim(),
         url: formState.url.trim(),
+        endDate: toApiDate(formState.endDate),
       }).unwrap()
       closeEdit()
     } catch (err) {
@@ -123,11 +163,12 @@ function AnnouncementManager() {
       {formError && <div className="settings-error">{formError}</div>}
       {isError && <div className="settings-error">{getErrorMessage(error)}</div>}
 
-      <div className="settings-table table-3">
+      <div className="settings-table table-4">
         <div className="settings-table-head">
           <div>Sr. No.</div>
           <div>Announcement</div>
           <div>URL</div>
+          <div>Expiry Date</div>
           <div className="settings-actions-col">Action</div>
         </div>
         <div className="settings-table-body">
@@ -143,6 +184,7 @@ function AnnouncementManager() {
                 <a className="settings-link-inline" href={item.url} target="_blank" rel="noreferrer">
                   {item.url}
                 </a>
+                <div>{formatDate(item.endDate)}</div>
                 <div className="settings-actions">
                   <button
                     type="button"
@@ -179,20 +221,39 @@ function AnnouncementManager() {
         <div className="modal-backdrop" onClick={() => setIsAddOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Add Announcement</h3>
-            <p>Provide the announcement text and link.</p>
+            <p>Provide the announcement text, link, and expiry date.</p>
             <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                value={formState.title}
-                onChange={(e) => setFormState((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="Announcement"
-              />
-              <input
-                type="text"
-                value={formState.url}
-                onChange={(e) => setFormState((prev) => ({ ...prev, url: e.target.value }))}
-                placeholder="URL"
-              />
+              <div className="modal-form">
+                <label className="modal-field">
+                  <span>Announcement</span>
+                  <input
+                    type="text"
+                    value={formState.title}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="Announcement"
+                  />
+                </label>
+                <label className="modal-field">
+                  <span>URL</span>
+                  <input
+                    type="text"
+                    value={formState.url}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, url: e.target.value }))}
+                    placeholder="URL"
+                  />
+                </label>
+                <label className="modal-field">
+                  <span>Expiry Date</span>
+                  <Calendar
+                    value={formState.endDate}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, endDate: e.value }))}
+                    dateFormat="dd M yy"
+                    minDate={new Date()}
+                    showIcon
+                    className="modal-calendar"
+                  />
+                </label>
+              </div>
               <div className="modal-actions">
                 <button type="button" className="ghost" onClick={() => setIsAddOpen(false)}>
                   Cancel
@@ -210,19 +271,38 @@ function AnnouncementManager() {
         <div className="modal-backdrop" onClick={closeEdit}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Edit Announcement</h3>
-            <p>Update the announcement and URL.</p>
-            <input
-              type="text"
-              value={formState.title}
-              onChange={(e) => setFormState((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="Announcement"
-            />
-            <input
-              type="text"
-              value={formState.url}
-              onChange={(e) => setFormState((prev) => ({ ...prev, url: e.target.value }))}
-              placeholder="URL"
-            />
+            <p>Update the announcement, URL, and expiry date.</p>
+            <div className="modal-form">
+              <label className="modal-field">
+                <span>Announcement</span>
+                <input
+                  type="text"
+                  value={formState.title}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Announcement"
+                />
+              </label>
+              <label className="modal-field">
+                <span>URL</span>
+                <input
+                  type="text"
+                  value={formState.url}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, url: e.target.value }))}
+                  placeholder="URL"
+                />
+              </label>
+              <label className="modal-field">
+                <span>Expiry Date</span>
+                <Calendar
+                  value={formState.endDate}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, endDate: e.value }))}
+                  dateFormat="dd M yy"
+                  minDate={new Date()}
+                  showIcon
+                  className="modal-calendar"
+                />
+              </label>
+            </div>
             <div className="modal-actions">
               <button type="button" className="ghost" onClick={closeEdit}>
                 Cancel
