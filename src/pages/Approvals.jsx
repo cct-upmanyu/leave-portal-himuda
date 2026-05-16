@@ -502,7 +502,6 @@ function Approvals() {
       emergencyContactName: employee?.emergency_contact_name || '',
       emergencyContactNumber: employee?.emergency_contact_number || '',
       days: duration.value,
-      status: 'pending',
     }
 
     if (editingLeave?.id) {
@@ -524,7 +523,10 @@ function Approvals() {
         )
       }
     } else {
-      await createLeave(payload).unwrap()
+      await createLeave({
+        ...payload,
+        status: 'pending',
+      }).unwrap()
     }
 
     setIsApplyOpen(false)
@@ -644,7 +646,7 @@ function Approvals() {
                             ) : null}
                             {isAdmin && isPendingLeave(leave) ? (
                               <button type="button" onClick={() => openAssignManagerModal(leave)}>
-                                Assign Reporting Manager
+                                Forward to Reporting Manager
                               </button>
                             ) : null}
                             {canManageLeave(leave) && isPendingLeave(leave) ? (

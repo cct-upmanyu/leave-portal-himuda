@@ -85,6 +85,7 @@ function LeaveTypeManager() {
   const [createForm, setCreateForm] = useState(emptyForm)
   const [detailForm, setDetailForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
+  const [openMenuId, setOpenMenuId] = useState(null)
 
   useEffect(() => {
     if (selectedLeaveType) {
@@ -155,6 +156,7 @@ function LeaveTypeManager() {
       if (!window.confirm('Are you sure you want to delete this leave type?')) {
         return
       }
+      setOpenMenuId(null)
       await deleteLeaveType(leaveTypeId).unwrap()
       if (String(id || '') === String(leaveTypeId)) {
         goBackToList()
@@ -361,35 +363,40 @@ function LeaveTypeManager() {
               <div className="leave-type-top">
                 <div className="leave-type-index">{index + 1}</div>
                 <span className="leave-type-name">{item.name}</span>
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleDelete(item.id)
-                  }}
-                  disabled={isDeleting}
-                  aria-label="Delete leave type"
-                >
-                  <i className="pi pi-trash" />
-                </button>
+                <div className="settings-action-menu" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="settings-menu-trigger"
+                    onClick={() =>
+                      setOpenMenuId((prev) => (prev === item.id ? null : item.id))
+                    }
+                    aria-label={`Open actions for ${item.name}`}
+                  >
+                    <span />
+                    <span />
+                    <span />
+                  </button>
+                  {openMenuId === item.id && (
+                    <div className="settings-menu-popup">
+                      <button type="button" onClick={() => openDetail(item.id, 'general')}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={isDeleting}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="leave-type-code">{getAvatarText(item)}</div>
               <div className="leave-type-footer">
                 <span>Total Leaves</span>
                 <strong>{item.totalLeaves ?? 0}</strong>
-              </div>
-              <div className="leave-type-actions">
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    openDetail(item.id, 'general')
-                  }}
-                >
-                  Edit
-                </button>
               </div>
             </div>
           ))

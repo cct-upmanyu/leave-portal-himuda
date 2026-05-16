@@ -376,7 +376,7 @@
   flex-direction: column;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  overflow: hidden;
+  overflow: visible;
   background: #fff;
 }
 
@@ -415,6 +415,7 @@
 .settings-table-body {
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 .settings-table-row {
@@ -435,54 +436,82 @@
   text-align: right;
 }
 
-.settings-table-row .settings-actions {
-  justify-content: flex-end;
-}
-
-.settings-table-row .settings-actions {
+.settings-action-menu {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+  min-width: 44px;
+  justify-self: end;
 }
 
-.settings-table-row .icon-button {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  display: grid;
-  place-items: center;
-  background: #fff;
-  color: #1f2a37;
+.settings-menu-trigger {
+  width: 36px;
+  min-height: 36px;
+  border: none;
+  background: #edf8ff;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 999px;
+}
+
+.settings-menu-trigger span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #3c7ea3;
 }
 
 .settings-menu-popup {
   position: absolute;
   right: 0;
-  top: 42px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  top: 44px;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #d6e0e8;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+  overflow: visible;
   display: grid;
-  min-width: 140px;
-  z-index: 10;
+  z-index: 1000;
+}
+
+.settings-table-body .settings-table-row:nth-last-child(-n + 2) .settings-menu-popup {
+  top: auto;
+  bottom: 44px;
 }
 
 .settings-menu-popup button {
-  border: none;
-  background: transparent;
-  padding: 0.6rem 0.9rem;
+  width: 100%;
   text-align: left;
-  font-weight: 600;
+  border: none;
+  background: #ffffff;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #334155;
   cursor: pointer;
-  color: #1f2a37;
+}
+
+.settings-menu-popup button + button {
+  border-top: 1px solid #ebf1f6;
 }
 
 .settings-menu-popup button:hover {
-  background: #f1f5f9;
+  background: #f3f8fb;
 }
 
 .settings-menu-popup .danger {
-  color: #b91c1c;
+  color: #b42318;
+}
+
+.settings-table-row .settings-action-menu .danger {
+  background: #ffffff;
 }
 
 .settings-table-row .settings-actions .ghost,

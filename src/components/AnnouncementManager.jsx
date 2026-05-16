@@ -185,15 +185,18 @@ function AnnouncementManager() {
                   {item.url}
                 </a>
                 <div>{formatDate(item.endDate)}</div>
-                <div className="settings-actions">
+                <div className="settings-action-menu" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="icon-button"
+                    className="settings-menu-trigger"
                     onClick={() =>
                       setOpenMenuId((prev) => (prev === item.id ? null : item.id))
                     }
+                    aria-label={`Open actions for ${item.title}`}
                   >
-                    <i className="pi pi-ellipsis-v" />
+                    <span />
+                    <span />
+                    <span />
                   </button>
                   {openMenuId === item.id && (
                     <div className="settings-menu-popup">

@@ -260,15 +260,18 @@ function HolidayManager() {
                 <div className="settings-cell-strong">{item.name}</div>
                 <div>{typeMap.get(String(item.holidayTypeId)) || 'Unknown type'}</div>
                 <div>{formatDate(item.holidayDate)}</div>
-                <div className="settings-actions">
+                <div className="settings-action-menu" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="icon-button"
+                    className="settings-menu-trigger"
                     onClick={() =>
                       setOpenMenuId((prev) => (prev === item.id ? null : item.id))
                     }
+                    aria-label={`Open actions for ${item.name}`}
                   >
-                    <i className="pi pi-ellipsis-v" />
+                    <span />
+                    <span />
+                    <span />
                   </button>
                   {openMenuId === item.id && (
                     <div className="settings-menu-popup">
