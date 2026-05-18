@@ -760,9 +760,9 @@ function Approvals({ mode = 'approvals' }) {
                                 Edit
                               </button>
                             ) : null}
-                            {isAdmin && isPendingLeave(leave) ? (
+                            {canManageLeave(leave) && isPendingLeave(leave) ? (
                               <button type="button" onClick={() => openAssignManagerModal(leave)}>
-                                Forward to Reporting Manager
+                                Forward
                               </button>
                             ) : null}
                             {canManageLeave(leave) && isPendingLeave(leave) ? (
@@ -1083,8 +1083,8 @@ function Approvals({ mode = 'approvals' }) {
           <div className="approval-modal" onClick={(event) => event.stopPropagation()}>
             <div className="approval-modal-head">
               <div>
-                <h3>Assign Reporting Manager</h3>
-                <p>{assignManagerLeave.employeeName || '-'}</p>
+                <h3>Forward leave request</h3>
+                <p>Employee Name : {assignManagerLeave.employeeName || '-'}</p>
               </div>
               <button type="button" className="approval-close-btn" onClick={() => setAssignManagerLeave(null)}>
                 x
@@ -1116,7 +1116,7 @@ function Approvals({ mode = 'approvals' }) {
                   Cancel
                 </button>
                 <button type="submit" className="approvals-primary-btn" disabled={isUpdating}>
-                  {isUpdating ? 'Assigning...' : 'Assign Manager'}
+                  {isUpdating ? 'Forwarding...' : 'Forward'}
                 </button>
               </div>
             </form>
