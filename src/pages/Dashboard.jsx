@@ -98,6 +98,12 @@ const getAnnouncementItems = (notifications) => {
   return [...notifications, ...notifications]
 }
 
+const formatLeaveValue = (value) => {
+  const numericValue = Number(value || 0)
+  if (!Number.isFinite(numericValue)) return '0'
+  return Number.isInteger(numericValue) ? String(numericValue) : numericValue.toFixed(2)
+}
+
 function Dashboard() {
   const navigate = useNavigate()
   const user = useSelector((state) => state.auth.user)
@@ -201,6 +207,24 @@ function Dashboard() {
     const parsed = new Date(`${value}T00:00:00`)
     return parsed.getMonth() === currentMonth && parsed.getFullYear() === currentYear
   }).length
+
+  const leaveBalanceCards = leaveTypes.map((type) => {
+    const total = Number(type.totalLeaves || 0)
+    const used = ownLeaves
+      .filter((leave) => String(leave.leaveTypeId || '') === String(type.id) && leave.status === 'approved')
+      .reduce((sum, leave) => sum + Number(leave.days || 0), 0)
+    const balance = Math.max(total - used, 0)
+    const progress = total > 0 ? Math.min((used / total) * 100, 100) : 0
+
+    return {
+      id: type.id,
+      name: type.name,
+      total,
+      used,
+      balance,
+      progress,
+    }
+  })
 
   const dashboardStats = isAdmin
     ? [
@@ -354,6 +378,41 @@ function Dashboard() {
           </button>
         ))}
       </section>
+
+      {!isAdmin ? (
+        <section className="dashboard-panel dashboard-leave-balance-panel">
+          <div className="dashboard-panel-head">
+            <div>
+              <span className="dashboard-panel-kicker">Leave Overview</span>
+              <h3>My Leave Balance</h3>
+            </div>
+          </div>
+
+          {leaveTypes.length ? (
+            <div className="dashboard-leave-balance-grid">
+              {leaveBalanceCards.map((item) => (
+                <div key={item.id} className="dashboard-leave-balance-card">
+                  <div className="dashboard-leave-balance-title">{item.name}</div>
+                  <div
+                    className="dashboard-leave-balance-ring"
+                    style={{ '--progress': `${item.progress}%` }}
+                  >
+                    <div>
+                      {formatLeaveValue(item.used)} / {formatLeaveValue(item.total)}
+                    </div>
+                  </div>
+                  <div className="dashboard-leave-balance-meta">
+                    <span>Taken: {formatLeaveValue(item.used)}</span>
+                    <strong>Balance: {formatLeaveValue(item.balance)}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-empty">No leave types found in settings.</div>
+          )}
+        </section>
+      ) : null}
 
       <section className="dashboard-main-grid">
         <article className="dashboard-panel dashboard-panel-wide">
