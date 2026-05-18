@@ -214,6 +214,14 @@
   border-color: transparent;
 }
 
+.approval-menu button.approval-menu-danger {
+  color: #a12f2f;
+}
+
+.approval-menu button.approval-menu-danger:hover {
+  background: #fff1f1;
+}
+
 .approvals-empty {
   text-align: center;
   padding: 2rem 1rem;

@@ -391,7 +391,19 @@ function Dashboard() {
           {leaveTypes.length ? (
             <div className="dashboard-leave-balance-grid">
               {leaveBalanceCards.map((item) => (
-                <div key={item.id} className="dashboard-leave-balance-card">
+                <button
+                  key={item.id}
+                  type="button"
+                  className="dashboard-leave-balance-card"
+                  onClick={() =>
+                    navigate('/my-leaves', {
+                      state: {
+                        openApplyModal: true,
+                        leaveTypeId: String(item.id),
+                      },
+                    })
+                  }
+                >
                   <div className="dashboard-leave-balance-title">{item.name}</div>
                   <div
                     className="dashboard-leave-balance-ring"
@@ -405,7 +417,7 @@ function Dashboard() {
                     <span>Taken: {formatLeaveValue(item.used)}</span>
                     <strong>Balance: {formatLeaveValue(item.balance)}</strong>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (

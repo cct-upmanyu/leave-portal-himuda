@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   useCreateLeaveMutation,
+  useDeleteLeaveMutation,
   useGetLeavesQuery,
   useUpdateLeaveMutation,
 } from '../redux/api/leaveApi'
@@ -117,6 +119,8 @@ const sortLeavesByStartDate = (records) =>
   [...records].sort((left, right) => String(right.startDate || '').localeCompare(String(left.startDate || '')))
 
 function Approvals({ mode = 'approvals' }) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
   const isReportingManager = isReportingManagerUser(user)
@@ -126,6 +130,7 @@ function Approvals({ mode = 'approvals' }) {
   const { data: leaveTypeResponse } = useGetLeaveTypesQuery()
   const [createLeave, { isLoading: isCreating }] = useCreateLeaveMutation()
   const [updateLeave, { isLoading: isUpdating }] = useUpdateLeaveMutation()
+  const [deleteLeave, { isLoading: isDeleting }] = useDeleteLeaveMutation()
 
   const leaves = leaveResponse?.data || []
   const employees = employeeResponse?.data || []
@@ -512,14 +517,18 @@ function Approvals({ mode = 'approvals' }) {
     })
   }
 
-  const openApplyModal = () => {
+  const openApplyModal = (options = {}) => {
+    const selectedLeaveTypeId = String(
+      options.leaveTypeId || form.leaveTypeId || leaveTypes[0]?.id || '',
+    )
+
     setEditingLeave(null)
     setForm((current) => ({
       ...emptyForm,
       employeeId: isAdmin
         ? current.employeeId || getEmployeeUserId(employees[0])
         : currentUserEmployeeId,
-      leaveTypeId: current.leaveTypeId || String(leaveTypes[0]?.id || ''),
+      leaveTypeId: selectedLeaveTypeId,
     }))
     setIsApplyOpen(true)
   }
@@ -589,6 +598,38 @@ function Approvals({ mode = 'approvals' }) {
       leaveTypeId: form.leaveTypeId,
     })
   }
+
+  const handleDeleteLeave = async (leave) => {
+    if (!isAdmin || !leave?.id) return
+
+    const confirmed = window.confirm(
+      `Delete this leave record for ${leave.employeeName || 'this employee'}? This will remove it from the database and update leave balance.`,
+    )
+
+    if (!confirmed) return
+
+    await deleteLeave(leave.id).unwrap()
+    setActiveMenuId(null)
+    if (selectedLeave?.id === leave.id) {
+      setSelectedLeave(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!location.state?.openApplyModal || !showApplyButton) return
+
+    openApplyModal({ leaveTypeId: location.state?.leaveTypeId })
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [
+    currentUserEmployeeId,
+    employees,
+    form.leaveTypeId,
+    leaveTypes,
+    location.pathname,
+    location.state,
+    navigate,
+    showApplyButton,
+  ])
 
   const selectedEmployee = selectedLeave
     ? employeeMap.get(String(selectedLeave.userId)) || {
@@ -720,6 +761,16 @@ function Approvals({ mode = 'approvals' }) {
                                   Reject
                                 </button>
                               </>
+                            ) : null}
+                            {isAdmin ? (
+                              <button
+                                type="button"
+                                className="approval-menu-danger"
+                                onClick={() => handleDeleteLeave(leave)}
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                              </button>
                             ) : null}
                           </div>
                         ) : null}
@@ -990,6 +1041,16 @@ function Approvals({ mode = 'approvals' }) {
                     Reject
                   </button>
                 </>
+              ) : null}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="approval-reject-btn"
+                  onClick={() => handleDeleteLeave(selectedLeave)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
               ) : null}
             </div>
           </div>
