@@ -64,10 +64,6 @@ function Sidebar() {
         <NavLink to="/employees" className={navClass}>
           {isAdmin ? 'Employees' : 'My Profile'}
         </NavLink>
-        <NavLink to="/work-diary" className={navClass}>
-          Work Diary
-        </NavLink>
-
         {isAdmin ? (
           <>
             <div className="nav-section">Settings</div>
