@@ -152,6 +152,7 @@ function Dashboard() {
       String(leave.reportingManagerId || '') === String(user?.rowid || '') &&
       String(leave.userId || '') !== String(user?.rowid || ''),
   )
+  const effectiveReportingManager = isReportingManager || managedLeaves.length > 0
 
   const approvedLeaves = normalizedLeaves.filter((leave) => leave.status === 'approved')
   const pendingLeaves = normalizedLeaves.filter((leave) => leave.status === 'pending')
@@ -285,24 +286,24 @@ function Dashboard() {
           actionLabel: 'View my leaves',
         },
         {
-          title: isReportingManager ? 'Team Pending' : 'Pending Leaves',
-          value: isReportingManager
+          title: effectiveReportingManager ? 'Team Pending' : 'Pending Leaves',
+          value: effectiveReportingManager
             ? managedLeaves.filter((leave) => leave.status === 'pending').length
             : ownLeaves.filter((leave) => leave.status === 'pending').length,
-          caption: isReportingManager ? 'Assigned requests waiting for review' : 'Your requests awaiting action',
+          caption: effectiveReportingManager ? 'Assigned requests waiting for review' : 'Your requests awaiting action',
           icon: 'pi-inbox',
           accent: 'blue',
-          action: () => navigate(isReportingManager ? approvalsRoute : myLeavesRoute),
-          actionLabel: isReportingManager ? 'Open assigned requests' : 'Open my requests',
+          action: () => navigate(effectiveReportingManager ? approvalsRoute : myLeavesRoute),
+          actionLabel: effectiveReportingManager ? 'Open assigned requests' : 'Open my requests',
         },
         {
-          title: isReportingManager ? 'Assigned Leaves' : 'Visible Leave Activity',
-          value: isReportingManager ? managedLeaves.length : ownLeaves.length,
-          caption: isReportingManager ? 'Only leave records assigned to you for review' : 'Your leave records only',
+          title: effectiveReportingManager ? 'Assigned Leaves' : 'Visible Leave Activity',
+          value: effectiveReportingManager ? managedLeaves.length : ownLeaves.length,
+          caption: effectiveReportingManager ? 'Only leave records assigned to you for review' : 'Your leave records only',
           icon: 'pi-briefcase',
           accent: 'rose',
-          action: () => navigate(isReportingManager ? approvalsRoute : myLeavesRoute),
-          actionLabel: isReportingManager ? 'Open approvals' : 'Open leave activity',
+          action: () => navigate(effectiveReportingManager ? approvalsRoute : myLeavesRoute),
+          actionLabel: effectiveReportingManager ? 'Open approvals' : 'Open leave activity',
         },
       ]
 
@@ -317,7 +318,7 @@ function Dashboard() {
           <p>
             {isAdmin
               ? 'Keep an eye on approvals, availability, announcements, and upcoming dates from one place.'
-              : isReportingManager
+              : effectiveReportingManager
                 ? 'Track your own leave activity in My Leaves and review only assigned requests in Approvals.'
                 : 'Track your profile, leave requests, and upcoming workplace updates from one place.'}
           </p>

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { useGetLeavesQuery } from '../redux/api/leaveApi'
 import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import '../styles/Layout.css'
 
@@ -19,7 +20,14 @@ const settingsLinks = [
 function Sidebar() {
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
-  const isReportingManager = isReportingManagerUser(user)
+  const { data: leaveResponse } = useGetLeavesQuery(undefined, { skip: isAdmin })
+  const leaves = leaveResponse?.data || []
+  const hasAssignedLeaves = leaves.some(
+    (leave) =>
+      String(leave?.reportingManagerId || '') === String(user?.rowid || '') &&
+      String(leave?.userId || '') !== String(user?.rowid || ''),
+  )
+  const isReportingManager = isReportingManagerUser(user) || hasAssignedLeaves
   const navClass = ({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')
   const subClass = ({ isActive }) =>
     isActive ? 'nav-sub-item active' : 'nav-sub-item'
