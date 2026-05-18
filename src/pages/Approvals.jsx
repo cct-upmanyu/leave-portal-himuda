@@ -1053,16 +1053,6 @@ function Approvals({ mode = 'approvals' }) {
                   </button>
                 </>
               ) : null}
-              {isAdmin ? (
-                <button
-                  type="button"
-                  className="approval-reject-btn"
-                  onClick={() => handleDeleteLeave(selectedLeave)}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              ) : null}
             </div>
           </div>
         </div>
