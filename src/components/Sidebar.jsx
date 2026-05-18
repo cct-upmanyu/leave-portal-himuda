@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { isAdminUser } from '../utils/access'
+import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import '../styles/Layout.css'
 
 const settingsLinks = [
@@ -19,6 +19,7 @@ const settingsLinks = [
 function Sidebar() {
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
+  const isReportingManager = isReportingManagerUser(user)
   const navClass = ({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')
   const subClass = ({ isActive }) =>
     isActive ? 'nav-sub-item active' : 'nav-sub-item'
@@ -36,9 +37,22 @@ function Sidebar() {
         <NavLink to="/dashboard" className={navClass}>
           Dashboard
         </NavLink>
-        <NavLink to="/approvals" className={navClass}>
-          {isAdmin ? 'Approvals' : 'My Leaves'}
-        </NavLink>
+        {isAdmin ? (
+          <NavLink to="/approvals" className={navClass}>
+            Approvals
+          </NavLink>
+        ) : (
+          <>
+            <NavLink to="/my-leaves" className={navClass}>
+              My Leaves
+            </NavLink>
+            {isReportingManager ? (
+              <NavLink to="/approvals" className={navClass}>
+                Approvals
+              </NavLink>
+            ) : null}
+          </>
+        )}
         <NavLink to="/employees" className={navClass}>
           {isAdmin ? 'Employees' : 'My Profile'}
         </NavLink>

@@ -7,7 +7,7 @@ import {
 } from '../redux/api/leaveApi'
 import { useGetEmployeesQuery, useGetManagersQuery } from '../redux/api/employeeApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
-import { isAdminUser } from '../utils/access'
+import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
 import '../styles/Approvals.css'
 
@@ -116,9 +116,10 @@ const isPendingLeave = (leave) => String(leave?.status || 'pending').toLowerCase
 const sortLeavesByStartDate = (records) =>
   [...records].sort((left, right) => String(right.startDate || '').localeCompare(String(left.startDate || '')))
 
-function Approvals() {
+function Approvals({ mode = 'approvals' }) {
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
+  const isReportingManager = isReportingManagerUser(user)
   const { data: leaveResponse, isLoading: isLeavesLoading } = useGetLeavesQuery()
   const { data: employeeResponse } = useGetEmployeesQuery()
   const { data: managersResponse } = useGetManagersQuery(undefined, { skip: !isAdmin })
@@ -153,6 +154,35 @@ function Approvals() {
       }),
     [employeeMap, leaveTypeMap, leaves],
   )
+
+  const ownLeaves = useMemo(
+    () =>
+      sortLeavesByStartDate(
+        normalizedLeaves.filter((leave) => String(leave.userId || '') === String(user?.rowid || '')),
+      ),
+    [normalizedLeaves, user?.rowid],
+  )
+
+  const managedLeaves = useMemo(
+    () =>
+      sortLeavesByStartDate(
+        normalizedLeaves.filter(
+          (leave) =>
+            String(leave.reportingManagerId || '') === String(user?.rowid || '') &&
+            String(leave.userId || '') !== String(user?.rowid || ''),
+        ),
+      ),
+    [normalizedLeaves, user?.rowid],
+  )
+
+  const isMyLeavesView = !isAdmin && mode === 'my-leaves'
+  const isUserApprovalsView = !isAdmin && mode === 'approvals'
+
+  const visibleLeaves = useMemo(() => {
+    if (isAdmin) return sortLeavesByStartDate(normalizedLeaves)
+    if (isMyLeavesView) return ownLeaves
+    return managedLeaves
+  }, [isAdmin, isMyLeavesView, managedLeaves, normalizedLeaves, ownLeaves])
 
   const leaveHistoryByEmployee = useMemo(() => {
     const grouped = new Map()
@@ -206,15 +236,35 @@ function Approvals() {
   const endDateMin = form.startDate || ''
   const isDateRangeReady = Boolean(form.startDate && form.endDate)
   const duration = getDaysLabel(form)
+  const currentUserEmployeeId = useMemo(() => {
+    const ownEmployee = employees.find(
+      (employee) => String(getEmployeeUserId(employee)) === String(user?.rowid || ''),
+    )
+    return ownEmployee ? getEmployeeUserId(ownEmployee) : String(user?.rowid || '')
+  }, [employees, user?.rowid])
+
+  const pageTitle = isAdmin ? 'Approvals' : isMyLeavesView ? 'My Leaves' : 'Approvals'
+  const pageDescription = isAdmin
+    ? 'Review leave requests, inspect details, and take action from one place.'
+    : isMyLeavesView
+      ? 'Track your own leave requests and apply for new leave from one place.'
+      : 'Review leave requests assigned to you as reporting manager.'
+  const showApplyButton = isAdmin || isMyLeavesView
+  const loadingCopy = isMyLeavesView ? 'Loading your leave requests...' : 'Loading leave requests...'
+  const emptyCopy = isMyLeavesView
+    ? 'No leave requests found for your account yet.'
+    : isUserApprovalsView
+      ? 'No leave requests are currently assigned to you for approval.'
+      : 'No leave requests available yet.'
 
   useEffect(() => {
-    if (!form.employeeId && employees.length) {
+    if (!form.employeeId && (isAdmin ? employees.length : currentUserEmployeeId)) {
       setForm((current) => ({
         ...current,
-        employeeId: getEmployeeUserId(employees[0]),
+        employeeId: isAdmin ? getEmployeeUserId(employees[0]) : currentUserEmployeeId,
       }))
     }
-  }, [employees, form.employeeId])
+  }, [currentUserEmployeeId, employees, form.employeeId, isAdmin])
 
   useEffect(() => {
     if (!form.leaveTypeId && leaveTypes.length) {
@@ -466,7 +516,9 @@ function Approvals() {
     setEditingLeave(null)
     setForm((current) => ({
       ...emptyForm,
-      employeeId: current.employeeId || getEmployeeUserId(employees[0]),
+      employeeId: isAdmin
+        ? current.employeeId || getEmployeeUserId(employees[0])
+        : currentUserEmployeeId,
       leaveTypeId: current.leaveTypeId || String(leaveTypes[0]?.id || ''),
     }))
     setIsApplyOpen(true)
@@ -562,12 +614,14 @@ function Approvals() {
       <section className="approvals-card">
         <div className="approvals-header">
           <div>
-            <h2>Approvals</h2>
-            <p>Review leave requests, inspect details, and take action from one place.</p>
+            <h2>{pageTitle}</h2>
+            <p>{pageDescription}</p>
           </div>
-          <button type="button" className="approvals-primary-btn" onClick={openApplyModal}>
-            Apply Leave
-          </button>
+          {showApplyButton ? (
+            <button type="button" className="approvals-primary-btn" onClick={openApplyModal}>
+              Apply Leave
+            </button>
+          ) : null}
         </div>
 
         <div className="approvals-table-wrap">
@@ -588,17 +642,17 @@ function Approvals() {
               {isLeavesLoading ? (
                 <tr>
                   <td colSpan="8" className="approvals-empty">
-                    Loading leave requests...
+                    {loadingCopy}
                   </td>
                 </tr>
-              ) : normalizedLeaves.length === 0 ? (
+              ) : visibleLeaves.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="approvals-empty">
-                    No leave requests available yet.
+                    {emptyCopy}
                   </td>
                 </tr>
               ) : (
-                normalizedLeaves.map((leave) => (
+                visibleLeaves.map((leave) => (
                   <tr
                     key={leave.id}
                     className="approval-row"

@@ -26,6 +26,7 @@ function App() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/my-leaves" element={<Approvals mode="my-leaves" />} />
         <Route path="/employees" element={<Employees />} />
         <Route path="/employees/:id" element={<EmployeeDetail />} />
         <Route path="/work-diary" element={<ComingSoon title="Work Diary" />} />

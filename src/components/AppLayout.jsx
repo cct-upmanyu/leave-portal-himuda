@@ -18,6 +18,7 @@ const getTitle = (pathname) => {
   }
   if (pathname === '/dashboard') return 'Dashboard'
   if (pathname === '/approvals') return 'Approvals'
+  if (pathname === '/my-leaves') return 'My Leaves'
   if (pathname === '/employees') return 'Employees'
   if (pathname.startsWith('/employees/')) return 'Employee Detail'
   if (pathname === '/work-diary') return 'Work Diary'

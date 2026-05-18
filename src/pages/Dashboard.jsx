@@ -55,7 +55,10 @@ const normalizeDate = (value) => {
   }
   const parsed = new Date(raw)
   if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toISOString().slice(0, 10)
+  const year = parsed.getFullYear()
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 const isAnnouncementActive = (notification, todayString) => {
@@ -100,6 +103,8 @@ function Dashboard() {
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
   const isReportingManager = isReportingManagerUser(user)
+  const myLeavesRoute = '/my-leaves'
+  const approvalsRoute = '/approvals'
 
   const { data: employeesData, isLoading: employeesLoading } = useGetEmployeesQuery()
   const { data: leavesData, isLoading: leavesLoading } = useGetLeavesQuery()
@@ -252,7 +257,7 @@ function Dashboard() {
           caption: ownLeaves.length ? 'Your leave requests in the system' : 'No leave requests yet',
           icon: 'pi-calendar',
           accent: 'amber',
-          action: () => navigate('/approvals'),
+          action: () => navigate(myLeavesRoute),
           actionLabel: 'View my leaves',
         },
         {
@@ -263,17 +268,17 @@ function Dashboard() {
           caption: isReportingManager ? 'Assigned requests waiting for review' : 'Your requests awaiting action',
           icon: 'pi-inbox',
           accent: 'blue',
-          action: () => navigate('/approvals'),
+          action: () => navigate(isReportingManager ? approvalsRoute : myLeavesRoute),
           actionLabel: isReportingManager ? 'Open assigned requests' : 'Open my requests',
         },
         {
-          title: 'Visible Leave Activity',
-          value: normalizedLeaves.length,
-          caption: isReportingManager ? 'Own plus assigned employee leave records' : 'Your leave records only',
+          title: isReportingManager ? 'Assigned Leaves' : 'Visible Leave Activity',
+          value: isReportingManager ? managedLeaves.length : ownLeaves.length,
+          caption: isReportingManager ? 'Only leave records assigned to you for review' : 'Your leave records only',
           icon: 'pi-briefcase',
           accent: 'rose',
-          action: () => navigate('/approvals'),
-          actionLabel: 'Open leave activity',
+          action: () => navigate(isReportingManager ? approvalsRoute : myLeavesRoute),
+          actionLabel: isReportingManager ? 'Open approvals' : 'Open leave activity',
         },
       ]
 
@@ -289,12 +294,16 @@ function Dashboard() {
             {isAdmin
               ? 'Keep an eye on approvals, availability, announcements, and upcoming dates from one place.'
               : isReportingManager
-                ? 'Track your own leave activity along with requests assigned to you for review.'
+                ? 'Track your own leave activity in My Leaves and review only assigned requests in Approvals.'
                 : 'Track your profile, leave requests, and upcoming workplace updates from one place.'}
           </p>
           <div className="dashboard-hero-actions">
-            <button type="button" className="dashboard-cta-primary" onClick={() => navigate('/approvals')}>
-              {isAdmin || isReportingManager ? 'Review Leaves' : 'My Leave Requests'}
+            <button
+              type="button"
+              className="dashboard-cta-primary"
+              onClick={() => navigate(isAdmin ? approvalsRoute : myLeavesRoute)}
+            >
+              {isAdmin ? 'Review Leaves' : 'My Leave Requests'}
             </button>
             <button type="button" className="dashboard-cta-secondary" onClick={() => navigate('/employees')}>
               {isAdmin ? 'Employee Directory' : 'My Profile'}
