@@ -783,16 +783,6 @@ function Approvals({ mode = 'approvals' }) {
                                 </button>
                               </>
                             ) : null}
-                            {isAdmin ? (
-                              <button
-                                type="button"
-                                className="approval-menu-danger"
-                                onClick={() => handleDeleteLeave(leave)}
-                                disabled={isDeleting}
-                              >
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                              </button>
-                            ) : null}
                           </div>
                         ) : null}
                       </div>
