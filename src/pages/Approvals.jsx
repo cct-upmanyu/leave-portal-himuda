@@ -126,7 +126,7 @@ function Approvals({ mode = 'approvals' }) {
   const isReportingManager = isReportingManagerUser(user)
   const { data: leaveResponse, isLoading: isLeavesLoading } = useGetLeavesQuery()
   const { data: employeeResponse } = useGetEmployeesQuery()
-  const { data: managersResponse } = useGetManagersQuery(undefined, { skip: !isAdmin })
+  const { data: managersResponse } = useGetManagersQuery()
   const { data: leaveTypeResponse } = useGetLeaveTypesQuery()
   const [createLeave, { isLoading: isCreating }] = useCreateLeaveMutation()
   const [updateLeave, { isLoading: isUpdating }] = useUpdateLeaveMutation()
@@ -140,6 +140,11 @@ function Approvals({ mode = 'approvals' }) {
   const employeeMap = useMemo(
     () => new Map(employees.map((employee) => [getEmployeeUserId(employee), employee])),
     [employees],
+  )
+
+  const managerMap = useMemo(
+    () => new Map(managers.map((manager) => [String(manager.id || ''), manager])),
+    [managers],
   )
 
   const leaveTypeMap = useMemo(
@@ -649,6 +654,22 @@ function Approvals({ mode = 'approvals' }) {
   const selectedEmployeeApprovedCount = selectedEmployeeHistory.filter((leave) => leave.status === 'approved').length
   const selectedEmployeePendingCount = selectedEmployeeHistory.filter((leave) => leave.status === 'pending').length
   const selectedEmployeeCancelledCount = selectedEmployeeHistory.filter((leave) => leave.status === 'cancelled').length
+  const selectedReportingManagerName = (() => {
+    const managerId = String(selectedLeave?.reportingManagerId || selectedEmployee?.reporting_manager || '').trim()
+    if (!managerId) return '-'
+
+    const employeeManager = employeeMap.get(managerId)
+    if (employeeManager) {
+      return getEmployeeName(employeeManager)
+    }
+
+    const manager = managerMap.get(managerId)
+    if (manager) {
+      return getEmployeeName(manager)
+    }
+
+    return managerId
+  })()
 
   return (
     <div className="approvals-page">
@@ -965,7 +986,7 @@ function Approvals({ mode = 'approvals' }) {
                     </div>
                     <div>
                       <span>Reporting Manager</span>
-                      <strong>{selectedEmployee?.reporting_manager || selectedLeave.reportingManagerId || '-'}</strong>
+                      <strong>{selectedReportingManagerName}</strong>
                     </div>
                   </div>
                 </div>
