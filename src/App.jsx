@@ -10,6 +10,7 @@ import Test from './pages/Test'
 import Employees from './pages/Employees'
 import EmployeeDetail from './pages/EmployeeDetail'
 import Approvals from './pages/Approvals'
+import ActivityLogs from './pages/ActivityLogs'
 import './App.css'
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
           <Route path="divisions" element={<SettingsLookupPage slug="divisions" />} />
           <Route path="circles" element={<SettingsLookupPage slug="circles" />} />
           <Route path="announcements" element={<SettingsLookupPage slug="announcements" />} />
+          <Route path="activity-logs" element={<ActivityLogs />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

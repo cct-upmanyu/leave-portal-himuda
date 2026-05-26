@@ -3,13 +3,16 @@ import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   useGetEmployeeByIdQuery,
+  useGetEmployeeLeaveBalancesQuery,
   useGetManagersQuery,
+  useUpdateEmployeeLeaveBalanceMutation,
   useUpdateEmployeeMutation,
 } from '../redux/api/employeeApi'
 import { useGetLeavesQuery } from '../redux/api/leaveApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
 import { isAdminUser } from '../utils/access'
+import ActivityTimeline from '../components/ActivityTimeline'
 import '../styles/Employees.css'
 
 const initialFormState = {
@@ -187,8 +190,16 @@ function EmployeeDetail() {
   const [formData, setFormData] = useState(initialFormState)
   const [sameAddress, setSameAddress] = useState(false)
   const [formError, setFormError] = useState('')
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false)
+  const [selectedBalance, setSelectedBalance] = useState(null)
+  const [balanceForm, setBalanceForm] = useState({ remainingBalance: '', remarks: '' })
+  const [balanceError, setBalanceError] = useState('')
+  const [timelineRefreshKey, setTimelineRefreshKey] = useState(0)
 
   const { data: employeeResponse, isLoading, isFetching, error } = useGetEmployeeByIdQuery(id, {
+    skip: !id,
+  })
+  const { data: leaveBalancesResponse, isFetching: isLeaveBalancesFetching } = useGetEmployeeLeaveBalancesQuery(id, {
     skip: !id,
   })
   const { data: leavesResponse } = useGetLeavesQuery()
@@ -199,10 +210,13 @@ function EmployeeDetail() {
   const { data: statesData } = useGetLookupsQuery('states')
   const { data: managersData } = useGetManagersQuery(undefined, { skip: !isAdmin })
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
+  const [updateEmployeeLeaveBalance, { isLoading: isUpdatingBalance }] =
+    useUpdateEmployeeLeaveBalanceMutation()
 
   const employee = employeeResponse?.data || null
   const leaves = leavesResponse?.data || []
   const leaveTypes = leaveTypesResponse?.data || []
+  const employeeLeaveBalances = leaveBalancesResponse?.data || []
   const departments = departmentsData?.data || []
   const designations = designationsData?.data || []
   const districts = districtsData?.data || []
@@ -287,24 +301,35 @@ function EmployeeDetail() {
       .sort((left, right) => String(right.startDate || '').localeCompare(String(left.startDate || '')))
   }, [employee, leaveTypeMap, leaves])
 
-  const leaveBalances = useMemo(() => {
-    return leaveTypes.map((type) => {
-      const used = employeeLeaves
-        .filter((leave) => String(leave.leaveTypeId || '') === String(type.id) && leave.status === 'approved')
-        .reduce((total, leave) => total + leave.daysValue, 0)
+  const leaveBalances = useMemo(
+    () =>
+      employeeLeaveBalances.map((item) => {
+        const total = Number(item.totalAllowed || 0)
+        const remaining = Number(item.remainingBalance || 0)
+        const usedFromLeaves = employeeLeaves
+          .filter(
+            (leave) =>
+              String(leave.leaveTypeId || '') === String(item.leaveTypeId || '') &&
+              String(leave.status || '').toLowerCase() === 'approved',
+          )
+          .reduce((sum, leave) => sum + Number(leave.daysValue || 0), 0)
+        const used = usedFromLeaves > 0 ? usedFromLeaves : Number(item.usedBalance || 0)
 
-      const total = Number(type.totalLeaves || 0)
-      const progress = total > 0 ? Math.min((used / total) * 100, 100) : 0
-
-      return {
-        id: type.id,
-        name: type.name,
-        used,
-        total,
-        progress,
-      }
-    })
-  }, [employeeLeaves, leaveTypes])
+        return {
+          ...item,
+          id: item.leaveTypeId,
+          name: item.leaveTypeName,
+          total,
+          remaining,
+          used,
+          yearlyAllowed: Number(item.yearlyAllowed || 0),
+          carriedForward: Number(item.carriedForwardBalance || 0),
+          carryForwardEnabled: Boolean(item.carryForwardEnabled),
+          progress: total > 0 ? Math.min((remaining / total) * 100, 100) : 0,
+        }
+      }),
+    [employeeLeaveBalances],
+  )
 
   useEffect(() => {
     if (!employee) return
@@ -335,6 +360,23 @@ function EmployeeDetail() {
   const closeFormModal = () => {
     setIsFormOpen(false)
     setFormError('')
+  }
+
+  const openBalanceModal = (balance) => {
+    setSelectedBalance(balance)
+    setBalanceForm({
+      remainingBalance: String(balance?.remaining ?? 0),
+      remarks: '',
+    })
+    setBalanceError('')
+    setIsBalanceModalOpen(true)
+  }
+
+  const closeBalanceModal = () => {
+    setIsBalanceModalOpen(false)
+    setSelectedBalance(null)
+    setBalanceForm({ remainingBalance: '', remarks: '' })
+    setBalanceError('')
   }
 
   const handleInputChange = (event) => {
@@ -373,9 +415,30 @@ function EmployeeDetail() {
 
     try {
       await updateEmployee({ id: employee.id, ...payload }).unwrap()
+      setTimelineRefreshKey((current) => current + 1)
       closeFormModal()
     } catch (submitError) {
       setFormError(submitError?.data?.error || 'Failed to save employee.')
+    }
+  }
+
+  const handleBalanceSubmit = async (event) => {
+    event.preventDefault()
+    if (!employee?.id || !selectedBalance?.leaveTypeId) return
+
+    setBalanceError('')
+
+    try {
+      await updateEmployeeLeaveBalance({
+        id: employee.id,
+        leaveTypeId: selectedBalance.leaveTypeId,
+        remainingBalance: balanceForm.remainingBalance,
+        remarks: balanceForm.remarks,
+      }).unwrap()
+      setTimelineRefreshKey((current) => current + 1)
+      closeBalanceModal()
+    } catch (submitError) {
+      setBalanceError(submitError?.data?.error || 'Failed to update leave balance.')
     }
   }
 
@@ -525,18 +588,37 @@ function EmployeeDetail() {
                       <h3>Leaves Balance</h3>
                     </div>
                     <div className="employee-balance-grid">
-                      {leaveBalances.length ? (
-                        leaveBalances.map((item) => (
-                          <div key={item.id} className="employee-balance-card">
-                            <span>{item.name}</span>
-                            <div
-                              className="employee-balance-ring"
+                      {isLeaveBalancesFetching ? (
+                        <div className="employee-empty">Loading leave balances...</div>
+                      ) : leaveBalances.length ? (
+	                        leaveBalances.map((item) => (
+	                          <div key={item.id} className="employee-balance-card">
+	                            <div className="employee-balance-card-head">
+	                              <span>{item.name}</span>
+                                {isAdmin ? (
+                                  <button
+                                    type="button"
+                                    className="employee-balance-link"
+                                    onClick={() => openBalanceModal(item)}
+                                  >
+                                    Update
+                                  </button>
+                                ) : null}
+	                            </div>
+	                            <div
+	                              className="employee-balance-ring"
                               style={{ '--progress': `${item.progress}%` }}
                             >
                               <div>
-                                {formatBalanceValue(item.used)} / {formatBalanceValue(item.total)}
+                                {formatBalanceValue(item.remaining)} / {formatBalanceValue(item.total)}
                               </div>
                             </div>
+                            <small>Used: {formatBalanceValue(item.used)}</small>
+                            {item.carryForwardEnabled && item.carriedForward > 0 ? (
+                              <small>Carry Forward: {formatBalanceValue(item.carriedForward)}</small>
+                            ) : (
+                              <small>Yearly Leaves: {formatBalanceValue(item.yearlyAllowed)}</small>
+                            )}
                           </div>
                         ))
                       ) : (
@@ -545,6 +627,19 @@ function EmployeeDetail() {
                     </div>
                   </div>
                 </section>
+              ) : null}
+
+              {isAdmin && employee?.id ? (
+                <ActivityTimeline
+                  title="Employee Timeline"
+                  description="Profile updates, leave dates, statuses, and balance changes for this employee."
+                  moduleName="employees"
+                  entityType="employee"
+                  entityId={employee.id}
+                  relatedUserId={getEmployeeUserId(employee)}
+                  refreshKey={timelineRefreshKey}
+                  limit={12}
+                />
               ) : null}
             </div>
           </div>
@@ -829,6 +924,87 @@ function EmployeeDetail() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isUpdating}>
                   {isUpdating ? 'Saving...' : 'Update Employee'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {isBalanceModalOpen && selectedBalance ? (
+        <div className="employee-modal-backdrop" onClick={closeBalanceModal}>
+          <div className="employee-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="employee-modal-header">
+              <div>
+                <h3>Update Leave Balance</h3>
+                <p>Adjust the available balance for {selectedBalance.name}.</p>
+              </div>
+              <button type="button" className="employee-modal-close" onClick={closeBalanceModal}>
+                x
+              </button>
+            </div>
+
+            <form className="employee-form" onSubmit={handleBalanceSubmit}>
+              <section className="employee-card">
+                <div className="card-title">Balance Detail</div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Leave Type</label>
+                    <input type="text" value={selectedBalance.name || ''} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>Total Allowed</label>
+                    <input type="text" value={formatBalanceValue(selectedBalance.total || 0)} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>Current Remaining</label>
+                    <input type="text" value={formatBalanceValue(selectedBalance.remaining || 0)} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>Used Leaves</label>
+                    <input type="text" value={formatBalanceValue(selectedBalance.used || 0)} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>New Remaining Balance *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.25"
+                      value={balanceForm.remainingBalance}
+                      onChange={(event) =>
+                        setBalanceForm((current) => ({
+                          ...current,
+                          remainingBalance: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="form-group form-group-full">
+                    <label>Remarks</label>
+                    <textarea
+                      rows="3"
+                      value={balanceForm.remarks}
+                      onChange={(event) =>
+                        setBalanceForm((current) => ({
+                          ...current,
+                          remarks: event.target.value,
+                        }))
+                      }
+                      placeholder="Reason for this balance adjustment"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {balanceError ? <div className="form-error">{balanceError}</div> : null}
+
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={closeBalanceModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isUpdatingBalance}>
+                  {isUpdatingBalance ? 'Updating...' : 'Update Balance'}
                 </button>
               </div>
             </form>

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useGetLeavesQuery } from '../redux/api/leaveApi'
 import { isAdminUser, isReportingManagerUser } from '../utils/access'
+import logo from '../assets/logo.webp'
 import '../styles/Layout.css'
 
 const settingsLinks = [
@@ -15,6 +16,7 @@ const settingsLinks = [
   { to: '/settings/divisions', label: 'Divisions' },
   { to: '/settings/circles', label: 'Circles' },
   { to: '/settings/announcements', label: 'Announcements' },
+  { to: '/settings/activity-logs', label: 'Activity Logs' },
 ]
 
 function Sidebar() {
@@ -34,7 +36,9 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-badge">HP</div>
+        <div className="brand-badge">
+          <img className="brand-logo-image" src={logo} alt="HIMUDA logo" />
+        </div>
         <div className="brand-text">
           <span>LEAVE PORTAL</span>
           <small>HIMUDA</small>

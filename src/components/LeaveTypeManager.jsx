@@ -13,16 +13,10 @@ const emptyForm = {
   name: '',
   code: '',
   totalLeaves: 0,
-  monthlyLeaves: 1,
   carryForward: false,
-  totalCarryForward: 0,
-  totalMonths: 1,
-  monthlyCarryForward: 0,
   maximumLeaveLimit: 0,
   isShortLeaveAllowed: false,
-  monthlyShortLeave: 0,
   isHalfDayLeaveAllowed: false,
-  monthlyHalfDayLeave: 0,
 }
 
 const tabConfig = [
@@ -36,16 +30,20 @@ const toFormState = (item) => ({
   name: item?.name || '',
   code: item?.code || '',
   totalLeaves: item?.totalLeaves ?? 0,
-  monthlyLeaves: item?.monthlyLeaves ?? 1,
   carryForward: Boolean(item?.carryForward),
-  totalCarryForward: item?.totalCarryForward ?? 0,
-  totalMonths: item?.totalMonths ?? 1,
-  monthlyCarryForward: item?.monthlyCarryForward ?? 0,
   maximumLeaveLimit: item?.maximumLeaveLimit ?? 0,
   isShortLeaveAllowed: Boolean(item?.isShortLeaveAllowed),
-  monthlyShortLeave: item?.monthlyShortLeave ?? 0,
   isHalfDayLeaveAllowed: Boolean(item?.isHalfDayLeaveAllowed),
-  monthlyHalfDayLeave: item?.monthlyHalfDayLeave ?? 0,
+})
+
+const buildLeaveTypePayload = (form) => ({
+  name: form.name,
+  code: form.code,
+  totalLeaves: Number(form.totalLeaves) || 0,
+  carryForward: Boolean(form.carryForward),
+  maximumLeaveLimit: Number(form.maximumLeaveLimit) || 0,
+  isShortLeaveAllowed: Boolean(form.isShortLeaveAllowed),
+  isHalfDayLeaveAllowed: Boolean(form.isHalfDayLeaveAllowed),
 })
 
 const getAvatarText = (item) => {
@@ -131,7 +129,7 @@ function LeaveTypeManager() {
     event.preventDefault()
     setFormError('')
     try {
-      const created = await createLeaveType(createForm).unwrap()
+      const created = await createLeaveType(buildLeaveTypePayload(createForm)).unwrap()
       closeAddModal()
       if (created?.data?.id) {
         openDetail(created.data.id, 'general')
@@ -145,7 +143,7 @@ function LeaveTypeManager() {
     event.preventDefault()
     setFormError('')
     try {
-      await updateLeaveType({ id, ...detailForm }).unwrap()
+      await updateLeaveType({ id, ...buildLeaveTypePayload(detailForm) }).unwrap()
     } catch (err) {
       setFormError(getErrorMessage(err))
     }
@@ -237,7 +235,7 @@ function LeaveTypeManager() {
             ) : (
               <>
                 <div className="leave-type-restriction-copy">
-                  Allowed durations for this leave policy are :
+                  Configure balance rules and applicable leave formats for this leave type.
                 </div>
 
                 <label className="leave-type-check">
@@ -261,29 +259,6 @@ function LeaveTypeManager() {
                       onChange={handleDetailChange}
                     />
                   </label>
-                </div>
-
-                <div className="leave-type-inline-row">
-                  <span>Every</span>
-                  <select
-                    name="totalMonths"
-                    value={detailForm.totalMonths}
-                    onChange={handleDetailChange}
-                  >
-                    <option value="1">1 Month</option>
-                    <option value="3">3 Months</option>
-                    <option value="6">6 Months</option>
-                    <option value="12">12 Months</option>
-                  </select>
-                  <span>number of</span>
-                  <input
-                    type="number"
-                    min="0"
-                    name="monthlyCarryForward"
-                    value={detailForm.monthlyCarryForward}
-                    onChange={handleDetailChange}
-                  />
-                  <span>leaves add to the employee account.</span>
                 </div>
 
                 <label className="leave-type-check">

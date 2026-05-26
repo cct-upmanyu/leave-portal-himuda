@@ -11,6 +11,7 @@ import { useGetEmployeesQuery, useGetManagersQuery } from '../redux/api/employee
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
 import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
+import ActivityTimeline from '../components/ActivityTimeline'
 import '../styles/Approvals.css'
 
 const getTodayString = () => {
@@ -783,6 +784,15 @@ function Approvals({ mode = 'approvals' }) {
                                 </button>
                               </>
                             ) : null}
+                            {isAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLeave(leave)}
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                              </button>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -1017,6 +1027,18 @@ function Approvals({ mode = 'approvals' }) {
                     ) : null}
                   </div>
                 </div>
+
+                {isAdmin && selectedLeave?.id ? (
+                  <ActivityTimeline
+                    title="Leave Timeline"
+                    description="Approval, forwarding, and edit history for this leave request."
+                    moduleName="leaves"
+                    entityType="leave"
+                    entityId={selectedLeave.id}
+                    limit={12}
+                    compact
+                  />
+                ) : null}
               </aside>
             </div>
 
@@ -1052,6 +1074,16 @@ function Approvals({ mode = 'approvals' }) {
                     Reject
                   </button>
                 </>
+              ) : null}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="approval-reject-btn"
+                  onClick={() => handleDeleteLeave(selectedLeave)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
               ) : null}
             </div>
           </div>

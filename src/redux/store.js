@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { authApi } from './api/authapi'
+import { activityLogApi } from './api/activityLogApi'
 import { employeeApi } from './api/employeeApi'
 import { holidayApi } from './api/holidayApi'
 import { leaveApi } from './api/leaveApi'
@@ -12,6 +13,7 @@ import authReducer from './slices/authSlice'
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    [activityLogApi.reducerPath]: activityLogApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [employeeApi.reducerPath]: employeeApi.reducer,
     [holidayApi.reducerPath]: holidayApi.reducer,
@@ -23,6 +25,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authApi.middleware,
+      activityLogApi.middleware,
       employeeApi.middleware,
       holidayApi.middleware,
       leaveApi.middleware,

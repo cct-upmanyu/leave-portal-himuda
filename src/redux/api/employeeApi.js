@@ -4,7 +4,7 @@ import { baseQueryWithToast } from './baseQueryWithToast'
 export const employeeApi = createApi({
   reducerPath: 'employeeApi',
   baseQuery: baseQueryWithToast,
-  tagTypes: ['Employees', 'Managers'],
+  tagTypes: ['Employees', 'Managers', 'EmployeeBalances'],
   endpoints: (builder) => ({
     getEmployees: builder.query({
       query: () => '/api/employees',
@@ -13,6 +13,10 @@ export const employeeApi = createApi({
     getEmployeeById: builder.query({
       query: (id) => `/api/employees/${id}`,
       providesTags: (result, error, id) => [{ type: 'Employees', id }],
+    }),
+    getEmployeeLeaveBalances: builder.query({
+      query: (id) => `/api/employees/${id}/leave-balances`,
+      providesTags: (result, error, id) => [{ type: 'EmployeeBalances', id }],
     }),
     createEmployee: builder.mutation({
       query: (payload) => ({
@@ -29,6 +33,18 @@ export const employeeApi = createApi({
         body: payload,
       }),
       invalidatesTags: ['Employees'],
+    }),
+    updateEmployeeLeaveBalance: builder.mutation({
+      query: ({ id, leaveTypeId, ...payload }) => ({
+        url: `/api/employees/${id}/leave-balances/${leaveTypeId}`,
+        method: 'PATCH',
+        body: payload,
+      }),
+      invalidatesTags: (result, error, arg) => [
+        { type: 'EmployeeBalances', id: arg.id },
+        { type: 'Employees', id: arg.id },
+        'ActivityLog',
+      ],
     }),
     deleteEmployee: builder.mutation({
       query: (id) => ({
@@ -54,8 +70,10 @@ export const employeeApi = createApi({
 export const {
   useGetEmployeesQuery,
   useGetEmployeeByIdQuery,
+  useGetEmployeeLeaveBalancesQuery,
   useCreateEmployeeMutation,
   useUpdateEmployeeMutation,
+  useUpdateEmployeeLeaveBalanceMutation,
   useDeleteEmployeeMutation,
   useChangeEmployeePasswordMutation,
   useGetManagersQuery,
