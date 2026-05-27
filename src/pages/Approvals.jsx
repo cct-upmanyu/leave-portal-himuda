@@ -12,6 +12,8 @@ import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
 import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
 import ActivityTimeline from '../components/ActivityTimeline'
+import PaginationControls from '../components/PaginationControls'
+import usePagination from '../utils/usePagination'
 import '../styles/Approvals.css'
 
 const getTodayString = () => {
@@ -188,12 +190,43 @@ function Approvals({ mode = 'approvals' }) {
 
   const isMyLeavesView = !isAdmin && mode === 'my-leaves'
   const isUserApprovalsView = !isAdmin && mode === 'approvals'
+  const [searchTerm, setSearchTerm] = useState('')
 
   const visibleLeaves = useMemo(() => {
     if (isAdmin) return sortLeavesByStartDate(normalizedLeaves)
     if (isMyLeavesView) return ownLeaves
     return managedLeaves
   }, [isAdmin, isMyLeavesView, managedLeaves, normalizedLeaves, ownLeaves])
+  const filteredLeaves = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return visibleLeaves
+
+    return visibleLeaves.filter((leave) =>
+      [
+        leave.leaveTypeName,
+        leave.employeeName,
+        leave.reason,
+        leave.status,
+        formatDate(leave.startDate),
+        formatDate(leave.endDate),
+        leave.daysDisplay || `${leave.days} Days`,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [searchTerm, visibleLeaves])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredLeaves, {
+    resetDeps: [mode, isAdmin, user?.rowid, searchTerm],
+  })
 
   const leaveHistoryByEmployee = useMemo(() => {
     const grouped = new Map()
@@ -680,11 +713,24 @@ function Approvals({ mode = 'approvals' }) {
             <h2>{pageTitle}</h2>
             <p>{pageDescription}</p>
           </div>
-          {showApplyButton ? (
-            <button type="button" className="approvals-primary-btn" onClick={openApplyModal}>
-              Apply Leave
-            </button>
-          ) : null}
+          <div className="approvals-header-actions">
+            <div className="approvals-search">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search"
+              />
+              <button type="button" className="approvals-primary-btn">
+                Search
+              </button>
+            </div>
+            {showApplyButton ? (
+              <button type="button" className="approvals-primary-btn" onClick={openApplyModal}>
+                Apply Leave
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="approvals-table-wrap">
@@ -708,14 +754,14 @@ function Approvals({ mode = 'approvals' }) {
                     {loadingCopy}
                   </td>
                 </tr>
-              ) : visibleLeaves.length === 0 ? (
+              ) : filteredLeaves.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="approvals-empty">
-                    {emptyCopy}
+                    {searchTerm ? 'No matching leave requests found.' : emptyCopy}
                   </td>
                 </tr>
               ) : (
-                visibleLeaves.map((leave) => (
+                paginatedItems.map((leave) => (
                   <tr
                     key={leave.id}
                     className="approval-row"
@@ -787,6 +833,7 @@ function Approvals({ mode = 'approvals' }) {
                             {isAdmin ? (
                               <button
                                 type="button"
+                                className="danger"
                                 onClick={() => handleDeleteLeave(leave)}
                                 disabled={isDeleting}
                               >
@@ -803,6 +850,14 @@ function Approvals({ mode = 'approvals' }) {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          currentPage={currentPage}
+          endItem={endItem}
+          onPageChange={setCurrentPage}
+          startItem={startItem}
+          totalItems={totalItems}
+          totalPages={totalPages}
+        />
       </section>
 
       {selectedLeave ? (
@@ -813,8 +868,13 @@ function Approvals({ mode = 'approvals' }) {
                 <h3>Employee Leave Details</h3>
                 <p>Approval record, employee profile, and leave summary in one view.</p>
               </div>
-              <button type="button" className="approval-close-btn" onClick={() => setSelectedLeave(null)}>
-                x
+              <button
+                type="button"
+                className="approval-close-btn"
+                onClick={() => setSelectedLeave(null)}
+                aria-label="Close dialog"
+              >
+                &times;
               </button>
             </div>
 
@@ -1098,8 +1158,13 @@ function Approvals({ mode = 'approvals' }) {
                 <h3>Forward leave request</h3>
                 <p>Employee Name : {assignManagerLeave.employeeName || '-'}</p>
               </div>
-              <button type="button" className="approval-close-btn" onClick={() => setAssignManagerLeave(null)}>
-                x
+              <button
+                type="button"
+                className="approval-close-btn"
+                onClick={() => setAssignManagerLeave(null)}
+                aria-label="Close dialog"
+              >
+                &times;
               </button>
             </div>
 
@@ -1144,8 +1209,8 @@ function Approvals({ mode = 'approvals' }) {
                 <h3>Reject Leave</h3>
                 <p>Add the reason for rejecting this leave request.</p>
               </div>
-              <button type="button" className="approval-close-btn" onClick={closeRejectModal}>
-                x
+              <button type="button" className="approval-close-btn" onClick={closeRejectModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 
@@ -1194,8 +1259,8 @@ function Approvals({ mode = 'approvals' }) {
                     : 'Create a new leave request using the same approval workflow.'}
                 </p>
               </div>
-              <button type="button" className="approval-close-btn" onClick={closeApplyModal}>
-                x
+              <button type="button" className="approval-close-btn" onClick={closeApplyModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 

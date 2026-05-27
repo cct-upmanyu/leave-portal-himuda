@@ -206,6 +206,11 @@
   display: grid;
 }
 
+.employee-table tbody tr:nth-last-child(-n + 2) .employee-menu-popup {
+  top: auto;
+  bottom: 44px;
+}
+
 .employee-menu-popup button {
   width: 100%;
   text-align: left;
@@ -306,12 +311,23 @@
 .employee-modal-close {
   width: 34px;
   height: 34px;
-  border-radius: 999px;
   border: none;
-  background: #e7f0f6;
+  background: transparent;
   color: #36566d;
-  font-size: 18px;
+  font-size: 26px;
+  line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.employee-modal-close:hover,
+.employee-modal-close:focus-visible {
+  background: transparent;
+  color: #1f4d6a;
+  outline: none;
 }
 
 .employee-form {

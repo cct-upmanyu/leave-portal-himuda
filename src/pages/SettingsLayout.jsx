@@ -10,6 +10,7 @@ const links = [
   { to: '/settings/holiday-type', label: 'Holiday Type' },
   { to: '/settings/divisions', label: 'Divisions' },
   { to: '/settings/circles', label: 'Circles' },
+  { to: '/settings/sub-divisions', label: 'Sub Divisions' },
   { to: '/settings/announcements', label: 'Announcements' },
 ]
 

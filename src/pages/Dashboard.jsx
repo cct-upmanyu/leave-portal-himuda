@@ -289,17 +289,6 @@ function Dashboard() {
           actionLabel: 'View my leaves',
         },
         {
-          title: effectiveReportingManager ? 'Team Pending' : 'Pending Leaves',
-          value: effectiveReportingManager
-            ? managedLeaves.filter((leave) => leave.status === 'pending').length
-            : ownLeaves.filter((leave) => leave.status === 'pending').length,
-          caption: effectiveReportingManager ? 'Assigned requests waiting for review' : 'Your requests awaiting action',
-          icon: 'pi-inbox',
-          accent: 'blue',
-          action: () => navigate(effectiveReportingManager ? approvalsRoute : myLeavesRoute),
-          actionLabel: effectiveReportingManager ? 'Open assigned requests' : 'Open my requests',
-        },
-        {
           title: effectiveReportingManager ? 'Assigned Leaves' : 'Visible Leave Activity',
           value: effectiveReportingManager ? managedLeaves.length : ownLeaves.length,
           caption: effectiveReportingManager ? 'Only leave records assigned to you for review' : 'Your leave records only',
@@ -362,7 +351,7 @@ function Dashboard() {
         </div>
       </section>
 
-      <section className="dashboard-stat-grid">
+      <section className={`dashboard-stat-grid ${!isAdmin ? 'dashboard-stat-grid-user' : ''}`}>
         {dashboardStats.map((item) => (
           <button
             key={item.title}

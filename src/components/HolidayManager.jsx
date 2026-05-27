@@ -8,6 +8,8 @@ import {
   useUpdateHolidayMutation,
 } from '../redux/api/holidayApi'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
+import PaginationControls from './PaginationControls'
+import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
 
 const getErrorMessage = (err) => {
@@ -64,6 +66,7 @@ const alignDateToYear = (value, year) => {
 
 function HolidayManager() {
   const [selectedYear, setSelectedYear] = useState(getCurrentYear)
+  const [searchTerm, setSearchTerm] = useState('')
   const { data, isLoading, isError, error } = useGetHolidaysQuery(selectedYear)
   const { data: typeData, isLoading: isTypeLoading } = useGetLookupsQuery('holiday_type')
   const [createHoliday, { isLoading: isCreating }] = useCreateHolidayMutation()
@@ -87,6 +90,33 @@ function HolidayManager() {
     holidayTypes.forEach((type) => map.set(String(type.id), type.name))
     return map
   }, [holidayTypes])
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return items
+
+    return items.filter((item) =>
+      [
+        item.name,
+        typeMap.get(String(item.holidayTypeId)) || '',
+        formatDate(item.holidayDate),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [items, searchTerm, typeMap])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startIndex,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredItems, {
+    resetDeps: [selectedYear, searchTerm],
+  })
 
   const [formState, setFormState] = useState({
     name: '',
@@ -233,6 +263,15 @@ function HolidayManager() {
             <i className="pi pi-angle-right" />
           </button>
         </div>
+        <div className="settings-search">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search Holidays"
+          />
+          <button type="button">Search</button>
+        </div>
         <button type="button" onClick={openAdd}>
           Add Holiday
         </button>
@@ -251,12 +290,14 @@ function HolidayManager() {
         <div className="settings-table-body">
           {isLoading ? (
             <div className="settings-empty">Loading...</div>
-          ) : items.length === 0 ? (
-            <div className="settings-empty">No holidays added for {selectedYear}.</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="settings-empty">
+              {searchTerm ? 'No matching holidays found.' : `No holidays added for ${selectedYear}.`}
+            </div>
           ) : (
-            items.map((item, index) => (
+            paginatedItems.map((item, index) => (
               <div key={item.id} className="settings-table-row">
-                <div>{index + 1}</div>
+                <div>{startIndex + index + 1}</div>
                 <div className="settings-cell-strong">{item.name}</div>
                 <div>{typeMap.get(String(item.holidayTypeId)) || 'Unknown type'}</div>
                 <div>{formatDate(item.holidayDate)}</div>
@@ -294,6 +335,14 @@ function HolidayManager() {
           )}
         </div>
       </div>
+      <PaginationControls
+        currentPage={currentPage}
+        endItem={endItem}
+        onPageChange={setCurrentPage}
+        startItem={startItem}
+        totalItems={totalItems}
+        totalPages={totalPages}
+      />
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddOpen(false)}>

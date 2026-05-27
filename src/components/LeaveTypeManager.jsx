@@ -7,6 +7,8 @@ import {
   useGetLeaveTypesQuery,
   useUpdateLeaveTypeMutation,
 } from '../redux/api/leaveTypeApi'
+import PaginationControls from './PaginationControls'
+import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
 
 const emptyForm = {
@@ -84,6 +86,7 @@ function LeaveTypeManager() {
   const [detailForm, setDetailForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     if (selectedLeaveType) {
@@ -93,6 +96,29 @@ function LeaveTypeManager() {
   }, [selectedLeaveType])
 
   const sortedItems = useMemo(() => items.slice().sort((a, b) => a.name.localeCompare(b.name)), [items])
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return sortedItems
+
+    return sortedItems.filter((item) =>
+      [item.name, item.code, item.totalLeaves, item.maximumLeaveLimit]
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [searchTerm, sortedItems])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startIndex,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredItems, {
+    resetDeps: [searchTerm],
+  })
 
   const closeAddModal = () => {
     setIsAddOpen(false)
@@ -303,9 +329,20 @@ function LeaveTypeManager() {
         <div>
           <h2>Leave Types</h2>
         </div>
-        <button type="button" onClick={() => setIsAddOpen(true)}>
-          Add leave Type
-        </button>
+        <div className="settings-form">
+          <div className="settings-search">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search Leave Types"
+            />
+            <button type="button">Search</button>
+          </div>
+          <button type="button" onClick={() => setIsAddOpen(true)}>
+            Add leave Type
+          </button>
+        </div>
       </div>
       <div className="leave-types-note">
         <strong>Leave Code:</strong> Casual Leave = CL, Paid Leave = PL, Medical Leave = ML,
@@ -318,10 +355,12 @@ function LeaveTypeManager() {
       <div className="leave-types-grid">
         {isLoading ? (
           <div className="settings-empty">Loading...</div>
-        ) : sortedItems.length === 0 ? (
-          <div className="settings-empty">No leave types added yet.</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="settings-empty">
+            {searchTerm ? 'No matching leave types found.' : 'No leave types added yet.'}
+          </div>
         ) : (
-          sortedItems.map((item, index) => (
+          paginatedItems.map((item, index) => (
             <div
               key={item.id}
               className="leave-type-card leave-type-card-clickable"
@@ -336,7 +375,7 @@ function LeaveTypeManager() {
               }}
             >
               <div className="leave-type-top">
-                <div className="leave-type-index">{index + 1}</div>
+                <div className="leave-type-index">{startIndex + index + 1}</div>
                 <span className="leave-type-name">{item.name}</span>
                 <div className="settings-action-menu" onClick={(event) => event.stopPropagation()}>
                   <button
@@ -377,6 +416,14 @@ function LeaveTypeManager() {
           ))
         )}
       </div>
+      <PaginationControls
+        currentPage={currentPage}
+        endItem={endItem}
+        onPageChange={setCurrentPage}
+        startItem={startItem}
+        totalItems={totalItems}
+        totalPages={totalPages}
+      />
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={closeAddModal}>

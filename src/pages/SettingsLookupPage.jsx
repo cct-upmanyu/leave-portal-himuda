@@ -11,6 +11,7 @@ const supportedTables = {
   designations: { table: 'designations', title: 'Designations' },
   divisions: { table: 'divisions', title: 'Divisions' },
   circles: { table: 'circles', title: 'Circles' },
+  'sub-divisions': { table: 'sub_divisions', title: 'Sub Divisions' },
   'holiday-type': { table: 'holiday_type', title: 'Holiday Type' },
 }
 

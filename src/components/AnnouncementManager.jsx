@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Calendar } from 'primereact/calendar'
 import {
   useCreateNotificationMutation,
@@ -6,6 +6,8 @@ import {
   useGetNotificationsQuery,
   useUpdateNotificationMutation,
 } from '../redux/api/notificationApi'
+import PaginationControls from './PaginationControls'
+import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
 
 const getErrorMessage = (err) => {
@@ -62,6 +64,27 @@ function AnnouncementManager() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return items
+
+    return items.filter((item) =>
+      [item.title, item.url, formatDate(item.endDate)].join(' ').toLowerCase().includes(term),
+    )
+  }, [items, searchTerm])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startIndex,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredItems, {
+    resetDeps: [searchTerm],
+  })
 
   const resetForm = () => {
     setFormState({ title: '', url: '', endDate: null })
@@ -156,6 +179,15 @@ function AnnouncementManager() {
       </div>
 
       <div className="settings-form">
+        <div className="settings-search">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search Announcements"
+          />
+          <button type="button">Search</button>
+        </div>
         <button type="button" onClick={openAdd}>
           Add Announcement
         </button>
@@ -174,12 +206,14 @@ function AnnouncementManager() {
         <div className="settings-table-body">
           {isLoading ? (
             <div className="settings-empty">Loading...</div>
-          ) : items.length === 0 ? (
-            <div className="settings-empty">No announcements yet.</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="settings-empty">
+              {searchTerm ? 'No matching announcements found.' : 'No announcements yet.'}
+            </div>
           ) : (
-            items.map((item, index) => (
+            paginatedItems.map((item, index) => (
               <div key={item.id} className="settings-table-row">
-                <div>{index + 1}</div>
+                <div>{startIndex + index + 1}</div>
                 <div className="settings-cell-strong">{item.title}</div>
                 <a className="settings-link-inline" href={item.url} target="_blank" rel="noreferrer">
                   {item.url}
@@ -219,6 +253,14 @@ function AnnouncementManager() {
           )}
         </div>
       </div>
+      <PaginationControls
+        currentPage={currentPage}
+        endItem={endItem}
+        onPageChange={setCurrentPage}
+        startItem={startItem}
+        totalItems={totalItems}
+        totalPages={totalPages}
+      />
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddOpen(false)}>

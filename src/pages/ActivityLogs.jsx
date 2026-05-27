@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useGetActivityLogsQuery } from '../redux/api/activityLogApi'
 import { useGetEmployeesQuery } from '../redux/api/employeeApi'
+import PaginationControls from '../components/PaginationControls'
+import usePagination from '../utils/usePagination'
 import '../styles/ActivityLogs.css'
 
 const moduleOptions = [
@@ -95,6 +97,7 @@ const enrichMetadataWithNames = (value, employeeNameMap) => {
 function ActivityLogs() {
   const [moduleName, setModuleName] = useState('')
   const [actionType, setActionType] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [selectedLog, setSelectedLog] = useState(null)
   const { data: employeesData } = useGetEmployeesQuery()
 
@@ -109,6 +112,36 @@ function ActivityLogs() {
 
   const { data, isLoading, error } = useGetActivityLogsQuery(params)
   const logs = data?.data || []
+  const filteredLogs = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return logs
+
+    return logs.filter((log) =>
+      [
+        formatDateTime(log.createdAt),
+        log.moduleName,
+        log.actionLabel,
+        log.actionType,
+        log.actorName,
+        log.targetName,
+        log.entityId,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [logs, searchTerm])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredLogs, {
+    resetDeps: [moduleName, actionType, searchTerm],
+  })
   const employees = employeesData?.data || []
   const employeeNameMap = useMemo(() => {
     const map = new Map()
@@ -179,6 +212,15 @@ function ActivityLogs() {
             placeholder="e.g. create, update, approve, forward"
           />
         </label>
+        <label>
+          <span>Search</span>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search activity logs"
+          />
+        </label>
       </div>
 
       {error ? <div className="settings-error">{error?.data?.error || 'Failed to load activity logs.'}</div> : null}
@@ -194,8 +236,8 @@ function ActivityLogs() {
         <div className="activity-log-table-body">
           {isLoading ? (
             <div className="activity-log-empty">Loading activity logs...</div>
-          ) : logs.length ? (
-            logs.map((log) => (
+          ) : filteredLogs.length ? (
+            paginatedItems.map((log) => (
               <button
                 key={log.id}
                 type="button"
@@ -210,10 +252,20 @@ function ActivityLogs() {
               </button>
             ))
           ) : (
-            <div className="activity-log-empty">No activity logs available.</div>
+            <div className="activity-log-empty">
+              {searchTerm ? 'No matching activity logs found.' : 'No activity logs available.'}
+            </div>
           )}
         </div>
       </div>
+      <PaginationControls
+        currentPage={currentPage}
+        endItem={endItem}
+        onPageChange={setCurrentPage}
+        startItem={startItem}
+        totalItems={totalItems}
+        totalPages={totalPages}
+      />
 
       {selectedLog ? (
         <div className="activity-log-backdrop" onClick={() => setSelectedLog(null)}>

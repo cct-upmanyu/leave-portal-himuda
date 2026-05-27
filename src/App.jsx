@@ -51,6 +51,7 @@ function App() {
           <Route path="holiday-type" element={<SettingsLookupPage slug="holiday-type" />} />
           <Route path="divisions" element={<SettingsLookupPage slug="divisions" />} />
           <Route path="circles" element={<SettingsLookupPage slug="circles" />} />
+          <Route path="sub-divisions" element={<SettingsLookupPage slug="sub-divisions" />} />
           <Route path="announcements" element={<SettingsLookupPage slug="announcements" />} />
           <Route path="activity-logs" element={<ActivityLogs />} />
         </Route>

@@ -11,7 +11,9 @@ import {
   useGetManagersQuery,
   useUpdateEmployeeMutation,
 } from '../redux/api/employeeApi'
+import PaginationControls from '../components/PaginationControls'
 import { isAdminUser } from '../utils/access'
+import usePagination from '../utils/usePagination'
 import '../styles/Employees.css'
 
 const initialFormState = {
@@ -47,6 +49,15 @@ const branchOptions = [
   { value: 'circles', label: 'Circle' },
   { value: 'sub_divisions', label: 'Sub Division' },
 ]
+
+const formatBranchName = (branch, divisionMap) => {
+  if (!branch) return ''
+  if (branch.division_name) {
+    return `${branch.name} (${branch.division_name})`
+  }
+  const divisionName = divisionMap.get(String(branch.division || ''))
+  return divisionName ? `${branch.name} (${divisionName})` : branch.name
+}
 
 const syncAddressFields = (data) => ({
   ...data,
@@ -161,6 +172,7 @@ function Employees() {
   const { data: designationsData } = useGetLookupsQuery('designations')
   const { data: districtsData } = useGetLookupsQuery('districts')
   const { data: statesData } = useGetLookupsQuery('states')
+  const { data: divisionsData } = useGetLookupsQuery('divisions')
   const { data: managersData } = useGetManagersQuery(undefined, { skip: !isAdmin })
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation()
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
@@ -178,6 +190,7 @@ function Employees() {
   const designations = designationsData?.data || []
   const districts = districtsData?.data || []
   const states = statesData?.data || []
+  const divisions = divisionsData?.data || []
   const managers = managersData?.data || []
   const branches = branchData?.data || []
 
@@ -188,6 +201,10 @@ function Employees() {
   const designationMap = useMemo(
     () => new Map(designations.map((item) => [String(item.id), item.name])),
     [designations],
+  )
+  const divisionMap = useMemo(
+    () => new Map(divisions.map((item) => [String(item.id), item.name])),
+    [divisions],
   )
   const assignableManagers = useMemo(() => {
     const employeeUserId = getEmployeeUserId(editingEmployee)
@@ -234,6 +251,17 @@ function Employees() {
         .includes(term)
     })
   }, [departmentMap, designationMap, employees, searchTerm])
+  const {
+    currentPage,
+    endItem,
+    paginatedItems,
+    setCurrentPage,
+    startItem,
+    totalItems,
+    totalPages,
+  } = usePagination(filteredEmployees, {
+    resetDeps: [searchTerm],
+  })
 
   const profileEmployee = !isAdmin ? filteredEmployees[0] || employees[0] || null : null
 
@@ -708,7 +736,7 @@ function Employees() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((employee) => {
+              {paginatedItems.map((employee) => {
                 const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || '-'
                 return (
                   <tr key={employee.id}>
@@ -775,6 +803,14 @@ function Employees() {
           )}
           {(isLoading || isFetching) && <div className="employee-empty">Loading employees...</div>}
         </div>
+        <PaginationControls
+          currentPage={currentPage}
+          endItem={endItem}
+          onPageChange={setCurrentPage}
+          startItem={startItem}
+          totalItems={totalItems}
+          totalPages={totalPages}
+        />
       </div>
       )}
 
@@ -795,8 +831,8 @@ function Employees() {
                   .
                 </p>
               </div>
-              <button type="button" className="employee-modal-close" onClick={closePasswordModal}>
-                x
+              <button type="button" className="employee-modal-close" onClick={closePasswordModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 
@@ -853,8 +889,8 @@ function Employees() {
                     : 'Fill out the employee details to create a new record.'}
                 </p>
               </div>
-              <button type="button" className="employee-modal-close" onClick={closeFormModal}>
-                x
+              <button type="button" className="employee-modal-close" onClick={closeFormModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 
@@ -1155,7 +1191,7 @@ function Employees() {
                           <option value="">Select</option>
                           {branches.map((item) => (
                             <option key={item.id} value={item.id}>
-                              {item.name}
+                              {formatBranchName(item, divisionMap)}
                             </option>
                           ))}
                         </select>

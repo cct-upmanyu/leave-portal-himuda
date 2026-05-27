@@ -49,6 +49,15 @@ const branchOptions = [
   { value: 'sub_divisions', label: 'Sub Division' },
 ]
 
+const formatBranchName = (branch, divisionMap) => {
+  if (!branch) return ''
+  if (branch.division_name) {
+    return `${branch.name} (${branch.division_name})`
+  }
+  const divisionName = divisionMap.get(String(branch.division || ''))
+  return divisionName ? `${branch.name} (${divisionName})` : branch.name
+}
+
 const syncAddressFields = (data) => ({
   ...data,
   correspondence_address: data.permanent_address,
@@ -208,6 +217,7 @@ function EmployeeDetail() {
   const { data: designationsData } = useGetLookupsQuery('designations')
   const { data: districtsData } = useGetLookupsQuery('districts')
   const { data: statesData } = useGetLookupsQuery('states')
+  const { data: divisionsData } = useGetLookupsQuery('divisions')
   const { data: managersData } = useGetManagersQuery(undefined, { skip: !isAdmin })
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
   const [updateEmployeeLeaveBalance, { isLoading: isUpdatingBalance }] =
@@ -221,6 +231,7 @@ function EmployeeDetail() {
   const designations = designationsData?.data || []
   const districts = districtsData?.data || []
   const states = statesData?.data || []
+  const divisions = divisionsData?.data || []
   const managers = managersData?.data || []
 
   const departmentMap = useMemo(
@@ -249,6 +260,10 @@ function EmployeeDetail() {
     () => new Map(states.map((item) => [String(item.id), item.name])),
     [states],
   )
+  const divisionMap = useMemo(
+    () => new Map(divisions.map((item) => [String(item.id), item.name])),
+    [divisions],
+  )
 
   const branchInfo = useMemo(
     () => parseBranching(employee?.organization_branching),
@@ -260,8 +275,8 @@ function EmployeeDetail() {
   })
   const branches = branchData?.data || []
   const branchMap = useMemo(
-    () => new Map(branches.map((item) => [String(item.id), item.name])),
-    [branches],
+    () => new Map(branches.map((item) => [String(item.id), formatBranchName(item, divisionMap)])),
+    [branches, divisionMap],
   )
 
   const assignableManagers = useMemo(() => {
@@ -654,8 +669,8 @@ function EmployeeDetail() {
                 <h3>{isAdmin ? 'Edit Employee' : 'Edit Profile'}</h3>
                 <p>Update the employee record and save your changes.</p>
               </div>
-              <button type="button" className="employee-modal-close" onClick={closeFormModal}>
-                x
+              <button type="button" className="employee-modal-close" onClick={closeFormModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 
@@ -844,7 +859,7 @@ function EmployeeDetail() {
                           <option value="">Select</option>
                           {branches.map((item) => (
                             <option key={item.id} value={item.id}>
-                              {item.name}
+                              {formatBranchName(item, divisionMap)}
                             </option>
                           ))}
                         </select>
@@ -939,8 +954,8 @@ function EmployeeDetail() {
                 <h3>Update Leave Balance</h3>
                 <p>Adjust the available balance for {selectedBalance.name}.</p>
               </div>
-              <button type="button" className="employee-modal-close" onClick={closeBalanceModal}>
-                x
+              <button type="button" className="employee-modal-close" onClick={closeBalanceModal} aria-label="Close dialog">
+                &times;
               </button>
             </div>
 
