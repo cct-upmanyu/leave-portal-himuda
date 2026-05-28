@@ -952,7 +952,7 @@ function EmployeeDetail() {
             <div className="employee-modal-header">
               <div>
                 <h3>Update Leave Balance</h3>
-                <p>Adjust the available balance for {selectedBalance.name}.</p>
+                <p>Set the employee-specific total and remaining balance for {selectedBalance.name}.</p>
               </div>
               <button type="button" className="employee-modal-close" onClick={closeBalanceModal} aria-label="Close dialog">
                 &times;
@@ -980,7 +980,7 @@ function EmployeeDetail() {
                     <input type="text" value={formatBalanceValue(selectedBalance.used || 0)} disabled />
                   </div>
                   <div className="form-group">
-                    <label>New Remaining Balance *</label>
+                    <label>New Employee Balance *</label>
                     <input
                       type="number"
                       min="0"
