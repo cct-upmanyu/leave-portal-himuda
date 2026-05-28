@@ -5,13 +5,6 @@ import PaginationControls from '../components/PaginationControls'
 import usePagination from '../utils/usePagination'
 import '../styles/ActivityLogs.css'
 
-const moduleOptions = [
-  { value: '', label: 'All Modules' },
-  { value: 'employees', label: 'Employees' },
-  { value: 'leaves', label: 'Leaves' },
-  { value: 'settings', label: 'Settings' },
-]
-
 const formatDateTime = (value) => {
   if (!value) return '-'
   const parsed = new Date(value)
@@ -95,19 +88,15 @@ const enrichMetadataWithNames = (value, employeeNameMap) => {
 }
 
 function ActivityLogs() {
-  const [moduleName, setModuleName] = useState('')
-  const [actionType, setActionType] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLog, setSelectedLog] = useState(null)
   const { data: employeesData } = useGetEmployeesQuery()
 
   const params = useMemo(
     () => ({
-      module: moduleName || undefined,
-      actionType: actionType || undefined,
       limit: 100,
     }),
-    [actionType, moduleName],
+    [],
   )
 
   const { data, isLoading, error } = useGetActivityLogsQuery(params)
@@ -140,7 +129,7 @@ function ActivityLogs() {
     totalItems,
     totalPages,
   } = usePagination(filteredLogs, {
-    resetDeps: [moduleName, actionType, searchTerm],
+    resetDeps: [searchTerm],
   })
   const employees = employeesData?.data || []
   const employeeNameMap = useMemo(() => {
@@ -192,26 +181,6 @@ function ActivityLogs() {
       </div>
 
       <div className="activity-log-filters">
-        <label>
-          <span>Module</span>
-          <select value={moduleName} onChange={(event) => setModuleName(event.target.value)}>
-            {moduleOptions.map((option) => (
-              <option key={option.value || 'all'} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span>Action Type</span>
-          <input
-            type="text"
-            value={actionType}
-            onChange={(event) => setActionType(event.target.value)}
-            placeholder="e.g. create, update, approve, forward"
-          />
-        </label>
         <label>
           <span>Search</span>
           <input

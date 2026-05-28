@@ -242,7 +242,7 @@
   display: grid;
 }
 
-.approvals-table tbody tr:nth-last-child(-n + 2) .approval-menu {
+.approvals-table tbody tr:last-child .approval-menu {
   top: auto;
   bottom: 44px;
 }

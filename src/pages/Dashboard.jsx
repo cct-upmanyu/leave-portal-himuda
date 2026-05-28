@@ -1,6 +1,6 @@
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { useGetEmployeesQuery } from '../redux/api/employeeApi'
+import { useGetEmployeeLeaveBalancesQuery, useGetEmployeesQuery } from '../redux/api/employeeApi'
 import { useGetHolidaysQuery } from '../redux/api/holidayApi'
 import { useGetLeavesQuery } from '../redux/api/leaveApi'
 import { useGetLeaveTypesQuery } from '../redux/api/leaveTypeApi'
@@ -77,11 +77,20 @@ const getLocalDateString = (value = new Date()) => {
   return `${year}-${month}-${day}`
 }
 
+const addDays = (date, days) => {
+  const nextDate = new Date(date)
+  nextDate.setDate(nextDate.getDate() + days)
+  return nextDate
+}
+
 const getEmployeeName = (employee) => {
   if (!employee) return 'Unknown employee'
   const fullName = [employee.first_name, employee.last_name].filter(Boolean).join(' ').trim()
   return fullName || employee.user_name || employee.email || 'Unknown employee'
 }
+
+const getEmployeeUserId = (employee) =>
+  String(employee?.emp_id || employee?.employeeUserId || employee?.rowid || employee?.id || '')
 
 const getInitials = (name) =>
   name
@@ -131,13 +140,21 @@ function Dashboard() {
 
   const today = new Date()
   const todayString = getLocalDateString(today)
+  const nextWeekString = getLocalDateString(addDays(today, 7))
   const currentMonth = today.getMonth()
   const currentYear = today.getFullYear()
   const todayMonthDay = `${today.getMonth() + 1}-${today.getDate()}`
 
   const employeeMap = new Map(employees.map((employee) => [String(employee.emp_id || employee.id || ''), employee]))
+  const currentEmployee =
+    employees.find((employee) => getEmployeeUserId(employee) === String(user?.rowid || '')) || null
   const holidayTypeMap = new Map(holidayTypes.map((item) => [String(item.id), item.name]))
   const leaveTypeMap = new Map(leaveTypes.map((item) => [String(item.id), item.name]))
+  const { data: employeeLeaveBalancesData, isLoading: leaveBalancesLoading } =
+    useGetEmployeeLeaveBalancesQuery(currentEmployee?.id, {
+      skip: isAdmin || !currentEmployee?.id,
+    })
+  const employeeLeaveBalances = employeeLeaveBalancesData?.data || []
 
   const normalizedLeaves = leaves.map((leave) => {
     const employee = employeeMap.get(String(leave.userId))
@@ -165,11 +182,16 @@ function Dashboard() {
     return startDate && endDate && startDate <= todayString && endDate >= todayString
   })
 
-  const recentLeaves = normalizedLeaves
-    .slice()
+  const upcomingLeaves = normalizedLeaves
+    .filter((leave) => {
+      if (leave.status === 'cancelled' || leave.status === 'rejected') return false
+      const startDate = normalizeDate(leave.startDate)
+      const endDate = normalizeDate(leave.endDate)
+      return startDate && endDate && startDate <= nextWeekString && endDate >= todayString
+    })
     .sort((a, b) => {
-      const left = new Date(b.startDate || b.createdAt || 0).getTime()
-      const right = new Date(a.startDate || a.createdAt || 0).getTime()
+      const left = new Date(a.startDate || a.createdAt || 0).getTime()
+      const right = new Date(b.startDate || b.createdAt || 0).getTime()
       return left - right
     })
     .slice(0, 5)
@@ -212,20 +234,18 @@ function Dashboard() {
     return parsed.getMonth() === currentMonth && parsed.getFullYear() === currentYear
   }).length
 
-  const leaveBalanceCards = leaveTypes.map((type) => {
-    const total = Number(type.totalLeaves || 0)
-    const used = ownLeaves
-      .filter((leave) => String(leave.leaveTypeId || '') === String(type.id) && leave.status === 'approved')
-      .reduce((sum, leave) => sum + Number(leave.days || 0), 0)
-    const balance = Math.max(total - used, 0)
-    const progress = total > 0 ? Math.min((used / total) * 100, 100) : 0
+  const leaveBalanceCards = employeeLeaveBalances.map((item) => {
+    const total = Number(item.totalAllowed || 0)
+    const remainingBalance = Number(item.remainingBalance || 0)
+    const takenLeaves = Math.max(total - remainingBalance, 0)
+    const progress = total > 0 ? Math.min((remainingBalance / total) * 100, 100) : 0
 
     return {
-      id: type.id,
-      name: type.name,
+      id: item.leaveTypeId,
+      name: item.leaveTypeName,
       total,
-      used,
-      balance,
+      remainingBalance,
+      takenLeaves,
       progress,
     }
   })
@@ -381,7 +401,9 @@ function Dashboard() {
             </div>
           </div>
 
-          {leaveTypes.length ? (
+          {leaveBalancesLoading || employeesLoading ? (
+            <div className="dashboard-empty">Loading leave balances...</div>
+          ) : leaveBalanceCards.length ? (
             <div className="dashboard-leave-balance-grid">
               {leaveBalanceCards.map((item) => (
                 <button
@@ -403,12 +425,12 @@ function Dashboard() {
                     style={{ '--progress': `${item.progress}%` }}
                   >
                     <div>
-                      {formatLeaveValue(item.used)} / {formatLeaveValue(item.total)}
+                      <span>Remaining Balance</span>
+                      <strong>{formatLeaveValue(item.remainingBalance)}</strong>
                     </div>
                   </div>
                   <div className="dashboard-leave-balance-meta">
-                    <span>Taken: {formatLeaveValue(item.used)}</span>
-                    <strong>Balance: {formatLeaveValue(item.balance)}</strong>
+                    <span>Taken Leaves: {formatLeaveValue(item.takenLeaves)}</span>
                   </div>
                 </button>
               ))}
@@ -423,8 +445,7 @@ function Dashboard() {
         <article className="dashboard-panel dashboard-panel-wide">
           <div className="dashboard-panel-head">
             <div>
-              <span className="dashboard-panel-kicker">Operational Pulse</span>
-              <h3>Recent Leave Requests</h3>
+              <h3>Upcoming Leave Requests</h3>
             </div>
             <button type="button" className="dashboard-text-link" onClick={() => navigate('/approvals')}>
               View all
@@ -433,11 +454,11 @@ function Dashboard() {
 
           {leavesLoading ? (
             <div className="dashboard-empty">Loading leave activity...</div>
-          ) : recentLeaves.length === 0 ? (
-            <div className="dashboard-empty">No leave requests available yet.</div>
+          ) : upcomingLeaves.length === 0 ? (
+            <div className="dashboard-empty">No upcoming leave requests in the next 7 days.</div>
           ) : (
             <div className="dashboard-request-list">
-              {recentLeaves.map((leave) => (
+              {upcomingLeaves.map((leave) => (
                 <div key={leave.id} className="dashboard-request-item">
                   <div className="dashboard-request-avatar">{getInitials(leave.employeeName)}</div>
                   <div className="dashboard-request-copy">
@@ -494,7 +515,7 @@ function Dashboard() {
               <button
                 type="button"
                 className="dashboard-text-link"
-                onClick={() => navigate('/settings/announcements')}
+                onClick={() => navigate('/announcements')}
               >
                 Manage
               </button>

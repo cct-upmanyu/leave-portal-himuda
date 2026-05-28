@@ -30,6 +30,14 @@ function App() {
         <Route path="/my-leaves" element={<Approvals mode="my-leaves" />} />
         <Route path="/employees" element={<Employees />} />
         <Route path="/employees/:id" element={<EmployeeDetail />} />
+        <Route
+          path="/announcements"
+          element={
+            <ProtectedRoute requireAdmin>
+              <SettingsLookupPage slug="announcements" />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/work-diary" element={<ComingSoon title="Work Diary" />} />
 
         <Route
@@ -52,7 +60,7 @@ function App() {
           <Route path="divisions" element={<SettingsLookupPage slug="divisions" />} />
           <Route path="circles" element={<SettingsLookupPage slug="circles" />} />
           <Route path="sub-divisions" element={<SettingsLookupPage slug="sub-divisions" />} />
-          <Route path="announcements" element={<SettingsLookupPage slug="announcements" />} />
+          <Route path="announcements" element={<Navigate to="/announcements" replace />} />
           <Route path="activity-logs" element={<ActivityLogs />} />
         </Route>
       </Route>

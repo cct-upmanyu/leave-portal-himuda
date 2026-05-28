@@ -622,8 +622,8 @@
 
 .employee-balance-ring {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   background: conic-gradient(#486172 var(--progress), #dbe4eb 0);
   display: grid;
@@ -632,8 +632,8 @@
 
 .employee-balance-ring::before {
   content: '';
-  width: 70px;
-  height: 70px;
+  width: 86px;
+  height: 86px;
   border-radius: 50%;
   background: #ffffff;
   position: absolute;
@@ -642,9 +642,23 @@
 .employee-balance-ring > div {
   position: relative;
   z-index: 1;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
   color: #3c7ea3;
   font-weight: 700;
-  font-size: 15px;
+  line-height: 1.15;
+}
+
+.employee-balance-ring span {
+  max-width: 70px;
+  color: #547088;
+  font-size: 10px;
+}
+
+.employee-balance-ring strong {
+  color: #2f7599;
+  font-size: 18px;
 }
 
 .employee-balance-card small {

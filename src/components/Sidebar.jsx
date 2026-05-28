@@ -16,11 +16,10 @@ const settingsLinks = [
   { to: '/settings/divisions', label: 'Divisions' },
   { to: '/settings/circles', label: 'Circles' },
   { to: '/settings/sub-divisions', label: 'Sub Divisions' },
-  { to: '/settings/announcements', label: 'Announcements' },
   { to: '/settings/activity-logs', label: 'Activity Logs' },
 ]
 
-function Sidebar() {
+function Sidebar({ onClose }) {
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
   const { data: leaveResponse } = useGetLeavesQuery(undefined, { skip: isAdmin })
@@ -44,6 +43,14 @@ function Sidebar() {
           <span>LEAVE PORTAL</span>
           <small>HIMUDA</small>
         </div>
+        <button
+          type="button"
+          className="sidebar-close"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        >
+          &times;
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -69,6 +76,11 @@ function Sidebar() {
         <NavLink to="/employees" className={navClass}>
           {isAdmin ? 'Employees' : 'My Profile'}
         </NavLink>
+        {isAdmin ? (
+          <NavLink to="/announcements" className={navClass}>
+            Announcements
+          </NavLink>
+        ) : null}
         {isAdmin ? (
           <>
             <div className="nav-section">Settings</div>

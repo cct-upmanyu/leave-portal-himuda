@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import Sidebar from './Sidebar'
@@ -21,6 +22,7 @@ const getTitle = (pathname) => {
   if (pathname === '/my-leaves') return 'My Leaves'
   if (pathname === '/employees') return 'Employees'
   if (pathname.startsWith('/employees/')) return 'Employee Detail'
+  if (pathname === '/announcements') return 'Announcements'
   if (pathname === '/work-diary') return 'Work Diary'
   return 'Leave Portal'
 }
@@ -29,6 +31,7 @@ function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [logout, { isLoading }] = useLogoutMutation()
   const user = useSelector((state) => state.auth.user)
   const isAdmin = isAdminUser(user)
@@ -45,14 +48,37 @@ function AppLayout() {
     }
   }
 
+  useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [location.pathname])
+
   return (
-    <div className="app-shell">
-      <Sidebar />
+    <div className={`app-shell ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+      <button
+        type="button"
+        className="sidebar-backdrop"
+        aria-label="Close navigation menu"
+        onClick={() => setIsSidebarOpen(false)}
+      />
+      <Sidebar onClose={() => setIsSidebarOpen(false)} />
       <div className="app-main">
         <header className="topbar">
-          <div>
-            <h1>{getTitle(location.pathname)}</h1>
-            <p className="topbar-subtitle">HIMUDA Leave Management</p>
+          <div className="topbar-title-row">
+            <button
+              type="button"
+              className="menu-toggle"
+              aria-label="Open navigation menu"
+              aria-expanded={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div>
+              <h1>{getTitle(location.pathname)}</h1>
+              <p className="topbar-subtitle">HIMUDA Leave Management</p>
+            </div>
           </div>
           <div className="topbar-actions">
             <div className="topbar-user">

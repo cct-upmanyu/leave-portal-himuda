@@ -616,7 +616,7 @@ function EmployeeDetail() {
                                     className="employee-balance-link"
                                     onClick={() => openBalanceModal(item)}
                                   >
-                                    Update
+                                    Customize
                                   </button>
                                 ) : null}
 	                            </div>
@@ -625,15 +625,11 @@ function EmployeeDetail() {
                               style={{ '--progress': `${item.progress}%` }}
                             >
                               <div>
-                                {formatBalanceValue(item.remaining)} / {formatBalanceValue(item.total)}
+                                <span>Remaining Balance</span>
+                                <strong>{formatBalanceValue(item.remaining)}</strong>
                               </div>
                             </div>
-                            <small>Used: {formatBalanceValue(item.used)}</small>
-                            {item.carryForwardEnabled && item.carriedForward > 0 ? (
-                              <small>Carry Forward: {formatBalanceValue(item.carriedForward)}</small>
-                            ) : (
-                              <small>Yearly Leaves: {formatBalanceValue(item.yearlyAllowed)}</small>
-                            )}
+                            <small>Taken Leaves: {formatBalanceValue(item.used)}</small>
                           </div>
                         ))
                       ) : (
