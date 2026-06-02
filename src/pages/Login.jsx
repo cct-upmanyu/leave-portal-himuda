@@ -104,12 +104,12 @@ function Login() {
 
             <form onSubmit={handleLogin}>
               <label className="login-field" htmlFor="email">
-                <span>Employee ID / E-mail</span>
+                <span>Username / E-mail</span>
                 <input
                   type="text"
                   id="email"
                   name="email"
-                  placeholder="Enter your employee ID or email"
+                  placeholder="Enter your username or email"
                   value={credentials.email}
                   onChange={handleInputChange}
                   required

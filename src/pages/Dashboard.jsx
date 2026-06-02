@@ -141,6 +141,7 @@ function Dashboard() {
   const today = new Date()
   const todayString = getLocalDateString(today)
   const nextWeekString = getLocalDateString(addDays(today, 7))
+  const nextMonthString = getLocalDateString(addDays(today, 30))
   const currentMonth = today.getMonth()
   const currentYear = today.getFullYear()
   const todayMonthDay = `${today.getMonth() + 1}-${today.getDate()}`
@@ -209,7 +210,12 @@ function Dashboard() {
         holidayTypeMap.get(String(holiday.holidayTypeId)) ||
         'Holiday',
     }))
-    .filter((holiday) => holiday.normalizedDate && holiday.normalizedDate >= todayString)
+    .filter(
+      (holiday) =>
+        holiday.normalizedDate &&
+        holiday.normalizedDate >= todayString &&
+        holiday.normalizedDate <= nextMonthString,
+    )
     .sort((a, b) => a.normalizedDate.localeCompare(b.normalizedDate))
     .slice(0, 6)
 
@@ -237,7 +243,7 @@ function Dashboard() {
   const leaveBalanceCards = employeeLeaveBalances.map((item) => {
     const total = Number(item.totalAllowed || 0)
     const remainingBalance = Number(item.remainingBalance || 0)
-    const takenLeaves = Math.max(total - remainingBalance, 0)
+    const takenLeaves = Number(item.usedBalance || 0)
     const progress = total > 0 ? Math.min((remainingBalance / total) * 100, 100) : 0
 
     return {

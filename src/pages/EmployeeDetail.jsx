@@ -49,6 +49,8 @@ const branchOptions = [
   { value: 'sub_divisions', label: 'Sub Division' },
 ]
 
+const employmentTypeOptions = ['Permannent', 'On-Contract']
+
 const formatBranchName = (branch, divisionMap) => {
   if (!branch) return ''
   if (branch.division_name) {
@@ -173,6 +175,10 @@ const getDaysValue = (leave) => {
   const hasPartialLeave =
     leave?.shortLeave || leave?.halfLeave || leave?.shortLeaveDate || leave?.halfLeaveDate
 
+  if (leave?.shortLeave || leave?.shortLeaveDate) {
+    return Math.max(0.25, totalDays - 0.75)
+  }
+
   return hasPartialLeave ? Math.max(0.5, totalDays - 0.5) : totalDays
 }
 
@@ -185,8 +191,10 @@ const statusLabel = (status) => {
 const normalizeStatusClass = (status) => `approval-status approval-status-${String(status || 'pending').toLowerCase()}`
 
 const formatBalanceValue = (value) => {
-  if (Number.isInteger(value)) return String(value)
-  return value.toFixed(1)
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return '0'
+  if (Number.isInteger(numericValue)) return String(numericValue)
+  return numericValue.toFixed(2)
 }
 
 function EmployeeDetail() {
@@ -750,13 +758,19 @@ function EmployeeDetail() {
                     </div>
                     <div className="form-group">
                       <label>Employment Type *</label>
-                      <input
-                        type="text"
+                      <select
                         name="employment_type"
                         value={formData.employment_type}
                         onChange={handleInputChange}
                         required
-                      />
+                      >
+                        <option value="">Select Employment Type</option>
+                        {employmentTypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="form-group">
                       <label>Reporting Manager</label>

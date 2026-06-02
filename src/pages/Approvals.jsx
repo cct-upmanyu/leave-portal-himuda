@@ -102,7 +102,8 @@ const getDaysLabel = ({ startDate, endDate, halfLeave, shortLeave, halfLeaveDate
   const totalDays = Math.max(1, Math.round((end - start) / millisecondsPerDay) + 1)
   const selectedPartialDate = shortLeave ? shortLeaveDate : halfLeave ? halfLeaveDate : ''
   const canReduce = Boolean(selectedPartialDate && selectedPartialDate >= startDate && selectedPartialDate <= endDate)
-  const value = canReduce ? Math.max(0.5, totalDays - 0.5) : totalDays
+  const partialReduction = shortLeave ? 0.75 : 0.5
+  const value = canReduce ? Math.max(shortLeave ? 0.25 : 0.5, totalDays - partialReduction) : totalDays
 
   return {
     value,

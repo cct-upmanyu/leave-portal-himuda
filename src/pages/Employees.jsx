@@ -50,6 +50,8 @@ const branchOptions = [
   { value: 'sub_divisions', label: 'Sub Division' },
 ]
 
+const employmentTypeOptions = ['Permannent', 'On-Contract']
+
 const formatBranchName = (branch, divisionMap) => {
   if (!branch) return ''
   if (branch.division_name) {
@@ -1043,14 +1045,19 @@ function Employees() {
                   </div>
                   <div className="form-group">
                     <label>Employment Type *</label>
-                    <input
-                      type="text"
+                    <select
                       name="employment_type"
                       value={formData.employment_type}
                       onChange={handleInputChange}
-                      placeholder="Enter Employment Type"
                       required
-                    />
+                    >
+                      <option value="">Select Employment Type</option>
+                      {employmentTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Reporting Manager</label>
