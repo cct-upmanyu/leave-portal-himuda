@@ -329,7 +329,6 @@ function Dashboard() {
     <div className="dashboard-page">
       <section className="dashboard-hero">
         <div className="dashboard-hero-copy">
-          <span className="dashboard-eyebrow">Live Workforce Snapshot</span>
           <h2>
             Welcome back, {getUserDisplayName(user)}
           </h2>

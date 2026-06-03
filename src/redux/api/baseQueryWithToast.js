@@ -36,6 +36,8 @@ const getAuthSuccess = (url) => {
   if (url?.includes('/api/auth/login')) return 'Login successful.'
   if (url?.includes('/api/auth/logout')) return 'Logged out successfully.'
   if (url?.includes('/api/auth/signup')) return 'Signup successful.'
+  if (url?.includes('/api/auth/forgot-password')) return 'Password reset successfully.'
+  if (url?.includes('/api/auth/change-password')) return 'Password changed successfully.'
   return ''
 }
 

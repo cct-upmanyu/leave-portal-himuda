@@ -236,6 +236,22 @@
   color: var(--text-muted);
 }
 
+.btn-change-password {
+  padding: 0.55rem 1rem;
+  border: 1px solid #c9d8e4;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #244c66;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-change-password:hover {
+  border-color: #2f6b8f;
+  color: #1f4d6a;
+}
+
 .btn-logout {
   padding: 0.55rem 1.2rem;
   border: none;
@@ -261,6 +277,117 @@
   padding: 2rem;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+}
+
+.password-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.password-modal {
+  width: min(430px, 100%);
+  background: #ffffff;
+  border: 1px solid #dce6ee;
+  border-radius: 14px;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.25);
+  color: #1f2a37;
+}
+
+.password-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 22px 0;
+}
+
+.password-modal-header h2 {
+  margin: 0;
+  color: #1f2a37;
+  font-size: 1.35rem;
+}
+
+.password-modal-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.password-modal-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #36566d;
+  cursor: pointer;
+  padding: 0;
+}
+
+.password-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px 22px;
+}
+
+.password-form label {
+  display: grid;
+  gap: 6px;
+  color: #3b4b66;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.password-form input {
+  height: 42px;
+  border: 1px solid #c9d3e3;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #1f2a37;
+  background: #ffffff;
+  font: inherit;
+}
+
+.password-form input:focus {
+  outline: none;
+  border-color: #2f7599;
+  box-shadow: 0 0 0 3px rgba(60, 126, 163, 0.12);
+}
+
+.password-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-password-secondary,
+.btn-password-primary {
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-password-secondary {
+  background: #eef3f7;
+  color: #244c66;
+}
+
+.btn-password-primary {
+  background: #2f6b8f;
+  color: #ffffff;
+}
+
+.btn-password-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 @media (max-width: 1024px) {
@@ -294,6 +421,7 @@
   .topbar-actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 }
 
@@ -352,5 +480,18 @@
 
   .app-content {
     padding: 1rem;
+  }
+
+  .topbar-actions {
+    align-items: stretch;
+  }
+
+  .topbar-user {
+    width: 100%;
+  }
+
+  .btn-change-password,
+  .btn-logout {
+    flex: 1 1 150px;
   }
 }

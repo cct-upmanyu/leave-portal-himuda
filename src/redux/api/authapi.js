@@ -27,6 +27,20 @@ export const authApi = createApi({
       }),
       invalidatesTags: ['Me'],
     }),
+    forgotPassword: builder.mutation({
+      query: (payload) => ({
+        url: '/api/auth/forgot-password',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+    changePassword: builder.mutation({
+      query: (payload) => ({
+        url: '/api/auth/change-password',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
     me: builder.query({
       query: () => ({
         url: '/api/auth/me',
@@ -37,4 +51,11 @@ export const authApi = createApi({
   }),
 })
 
-export const { useSignupMutation, useLoginMutation, useLogoutMutation, useMeQuery } = authApi
+export const {
+  useSignupMutation,
+  useLoginMutation,
+  useLogoutMutation,
+  useForgotPasswordMutation,
+  useChangePasswordMutation,
+  useMeQuery,
+} = authApi
