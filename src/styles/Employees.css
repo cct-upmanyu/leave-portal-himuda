@@ -375,6 +375,7 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
+  width: 100%;
   border: 1px solid #c9d3e3;
   border-radius: 8px;
   padding: 10px 12px;
@@ -390,6 +391,10 @@
   outline: none;
   border-color: #2f7599;
   box-shadow: 0 0 0 3px rgba(60, 126, 163, 0.12);
+}
+
+.form-group .password-input-shell__input {
+  padding-right: 3rem;
 }
 
 .form-group textarea {

@@ -12,6 +12,7 @@ import {
   useUpdateEmployeeMutation,
 } from '../redux/api/employeeApi'
 import PaginationControls from '../components/PaginationControls'
+import PasswordInput from '../components/PasswordInput'
 import { isAdminUser } from '../utils/access'
 import usePagination from '../utils/usePagination'
 import '../styles/Employees.css'
@@ -95,6 +96,8 @@ const normalizeDateInput = (value) => {
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+const isPhoneNumber = (value) => /^\d{10,14}$/.test(String(value))
 
 const formatDisplayDate = (value) => {
   if (!value) return '-'
@@ -371,6 +374,18 @@ function Employees() {
 
     const activeEmployee = isAdmin ? editingEmployee : profileEmployee
     const isEditing = Boolean(activeEmployee)
+    const phoneValidationFields = [
+      { name: 'mobile_number', label: 'Mobile Number' },
+      { name: 'emergency_contact_number', label: 'Emergency Contact Number' },
+    ]
+
+    for (const field of phoneValidationFields) {
+      const value = String(formData[field.name] || '').trim()
+      if (value && !isPhoneNumber(value)) {
+        setFormError(`${field.label} must be 10 to 14 digits.`)
+        return
+      }
+    }
 
     try {
       const payload = getEmployeePayload(isEditing)
@@ -544,6 +559,9 @@ function Employees() {
                       onChange={handleInputChange}
                       placeholder="Enter Mobile Number"
                       required
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="\d{10,14}"
                     />
                   </div>
                   <div className="form-group">
@@ -555,6 +573,9 @@ function Employees() {
                       onChange={handleInputChange}
                       placeholder="Enter Emergency Contact Number"
                       required
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="\d{10,14}"
                     />
                   </div>
                   <div className="form-group">
@@ -841,24 +862,26 @@ function Employees() {
             <form onSubmit={handlePasswordSubmit}>
               <div className="form-group">
                 <label>New Password *</label>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="employee-new-password"
                   name="password"
                   value={passwordForm.password}
                   onChange={handlePasswordInputChange}
                   placeholder="Enter new password"
                   required
+                  autoComplete="new-password"
                 />
               </div>
               <div className="form-group">
                 <label>Confirm Password *</label>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="employee-confirm-password"
                   name="confirm_password"
                   value={passwordForm.confirm_password}
                   onChange={handlePasswordInputChange}
                   placeholder="Confirm new password"
                   required
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -972,24 +995,26 @@ function Employees() {
                     <>
                       <div className="form-group">
                         <label>Password *</label>
-                        <input
-                          type="password"
+                        <PasswordInput
+                          id="employee-password"
                           name="password"
                           value={formData.password || ''}
                           onChange={handleInputChange}
                           placeholder="Enter Password"
                           required
+                          autoComplete="new-password"
                         />
                       </div>
                       <div className="form-group">
                         <label>Confirm Password *</label>
-                        <input
-                          type="password"
+                        <PasswordInput
+                          id="employee-confirm-password-form"
                           name="confirm_password"
                           value={formData.confirm_password || ''}
                           onChange={handleInputChange}
                           placeholder="Confirm password"
                           required
+                          autoComplete="new-password"
                         />
                       </div>
                     </>
@@ -1101,6 +1126,9 @@ function Employees() {
                       onChange={handleInputChange}
                       placeholder="Enter Mobile Number"
                       required
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="\d{10,14}"
                     />
                   </div>
                   <div className="form-group">
@@ -1112,6 +1140,9 @@ function Employees() {
                       onChange={handleInputChange}
                       placeholder="Enter Emergency Contact Number"
                       required
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="\d{10,14}"
                     />
                   </div>
                   <div className="form-group">

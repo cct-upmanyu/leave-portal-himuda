@@ -206,6 +206,12 @@
   gap: 1rem;
 }
 
+.topbar-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .topbar-user {
   display: flex;
   align-items: center;
@@ -213,6 +219,24 @@
   padding: 0.5rem 0.75rem;
   background: #f3f6f9;
   border-radius: 999px;
+}
+
+.topbar-user-button {
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.topbar-user-button:hover {
+  border-color: #c7d4df;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.topbar-user-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .avatar {
@@ -236,20 +260,59 @@
   color: var(--text-muted);
 }
 
-.btn-change-password {
-  padding: 0.55rem 1rem;
-  border: 1px solid #c9d8e4;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #244c66;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.profile-caret {
+  width: 0;
+  height: 0;
+  margin-left: 0.1rem;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #5f7688;
 }
 
-.btn-change-password:hover {
-  border-color: #2f6b8f;
-  color: #1f4d6a;
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 210px;
+  padding: 0.45rem;
+  background: #ffffff;
+  border: 1px solid #d9e3ec;
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  z-index: 1200;
+}
+
+.profile-menu-item {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  border: none;
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  background: transparent;
+  color: #244c66;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-menu-item:hover {
+  background: #f2f7fb;
+}
+
+.profile-menu-item.danger {
+  color: #c0392b;
+}
+
+.profile-menu-item.danger:hover {
+  background: #fff1f1;
+}
+
+.profile-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .btn-logout {
@@ -351,6 +414,10 @@
   color: #1f2a37;
   background: #ffffff;
   font: inherit;
+}
+
+.password-form .password-input-shell__input {
+  padding-right: 3rem;
 }
 
 .password-form input:focus {
@@ -490,8 +557,12 @@
     width: 100%;
   }
 
-  .btn-change-password,
-  .btn-logout {
-    flex: 1 1 150px;
+  .topbar-profile {
+    width: 100%;
+  }
+
+  .topbar-user-button {
+    width: 100%;
+    justify-content: space-between;
   }
 }

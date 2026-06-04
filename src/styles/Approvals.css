@@ -204,6 +204,7 @@
   justify-content: center;
   overflow: visible !important;
   min-width: 44px;
+  z-index: 50;
 }
 
 .approval-menu-trigger {
@@ -237,7 +238,7 @@
   border: 1px solid #d6e0e8;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
-  z-index: 1000;
+  z-index: 5000;
   overflow: visible;
   display: grid;
 }
@@ -674,6 +675,28 @@
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1.25rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding-top: 0.75rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), #ffffff 28%);
+  backdrop-filter: blur(4px);
+}
+
+.approval-forward-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.75rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  background: #eaf4fb;
+  color: #215e87;
+}
+
+.approval-forward-btn:hover {
+  background: #dcecf8;
+  border-color: #c1ddef;
 }
 
 .approval-compact-modal {

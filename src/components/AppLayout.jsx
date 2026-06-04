@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import Sidebar from './Sidebar'
@@ -6,8 +6,9 @@ import '../styles/Layout.css'
 import { authApi, useChangePasswordMutation, useLogoutMutation } from '../redux/api/authapi'
 import { clearUser, setForcedLogout } from '../redux/slices/authSlice'
 import { clearAuthToken } from '../utils/authToken'
-import { getUserDisplayName, getUserRoleLabel, isAdminUser } from '../utils/access'
+import { getUserDisplayName, getUserRoleLabel } from '../utils/access'
 import { toastService } from '../utils/toastService'
+import PasswordInput from './PasswordInput'
 
 const getTitle = (pathname) => {
   if (pathname.startsWith('/settings')) {
@@ -33,6 +34,7 @@ function AppLayout() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -42,7 +44,7 @@ function AppLayout() {
   const [logout, { isLoading }] = useLogoutMutation()
   const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation()
   const user = useSelector((state) => state.auth.user)
-  const isAdmin = isAdminUser(user)
+  const profileMenuRef = useRef(null)
 
   const handleLogout = async () => {
     try {
@@ -58,7 +60,29 @@ function AppLayout() {
 
   useEffect(() => {
     setIsSidebarOpen(false)
+    setIsProfileMenuOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handleClickOutside)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
 
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target
@@ -72,6 +96,11 @@ function AppLayout() {
       password: '',
       confirm_password: '',
     })
+  }
+
+  const openPasswordModal = () => {
+    setIsProfileMenuOpen(false)
+    setIsPasswordModalOpen(true)
   }
 
   const handleChangePassword = async (e) => {
@@ -134,19 +163,39 @@ function AppLayout() {
             </div>
           </div>
           <div className="topbar-actions">
-            <div className="topbar-user">
-              <div className="avatar">A</div>
-              <div>
-                <div className="user-name">{getUserDisplayName(user)}</div>
-                <div className="user-role">{getUserRoleLabel(user)}</div>
-              </div>
+            <div className="topbar-profile" ref={profileMenuRef}>
+              <button
+                type="button"
+                className="topbar-user topbar-user-button"
+                aria-haspopup="menu"
+                aria-expanded={isProfileMenuOpen}
+                onClick={() => setIsProfileMenuOpen((current) => !current)}
+              >
+                <div className="avatar">A</div>
+                <div className="topbar-user-copy">
+                  <div className="user-name">{getUserDisplayName(user)}</div>
+                  <div className="user-role">{getUserRoleLabel(user)}</div>
+                </div>
+                <span className="profile-caret" aria-hidden="true" />
+              </button>
+
+              {isProfileMenuOpen ? (
+                <div className="profile-menu" role="menu">
+                  <button type="button" className="profile-menu-item" role="menuitem" onClick={openPasswordModal}>
+                    Change Password
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-menu-item danger"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Logging out...' : 'Logout'}
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <button type="button" className="btn-change-password" onClick={() => setIsPasswordModalOpen(true)}>
-              Change Password
-            </button>
-            <button className="btn-logout" onClick={handleLogout} disabled={isLoading}>
-              {isLoading ? 'Logging out...' : 'Logout'}
-            </button>
           </div>
         </header>
         <main className="app-content">
@@ -168,32 +217,35 @@ function AppLayout() {
             <form className="password-form" onSubmit={handleChangePassword}>
               <label>
                 <span>Current Password</span>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="current-password"
                   name="current_password"
                   value={passwordForm.current_password}
                   onChange={handlePasswordInputChange}
                   required
+                  autoComplete="current-password"
                 />
               </label>
               <label>
                 <span>New Password</span>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="new-password"
                   name="password"
                   value={passwordForm.password}
                   onChange={handlePasswordInputChange}
                   required
+                  autoComplete="new-password"
                 />
               </label>
               <label>
                 <span>Confirm Password</span>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="confirm-password"
                   name="confirm_password"
                   value={passwordForm.confirm_password}
                   onChange={handlePasswordInputChange}
                   required
+                  autoComplete="new-password"
                 />
               </label>
               <div className="password-modal-actions">

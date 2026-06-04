@@ -1,13 +1,12 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
-import { useSelector } from 'react-redux'
-import { authApi, useForgotPasswordMutation, useLoginMutation } from '../redux/api/authapi'
+import { useDispatch, useSelector } from 'react-redux'
+import { authApi, useLoginMutation } from '../redux/api/authapi'
 import { clearForcedLogout, setUser } from '../redux/slices/authSlice'
 import { setAuthToken } from '../utils/authToken'
 import { toastService } from '../utils/toastService'
-import logo from '../assets/logo.webp'
+import AuthFrame from '../components/AuthFrame'
+import PasswordInput from '../components/PasswordInput'
 import '../styles/Login.css'
 
 function Login() {
@@ -18,24 +17,12 @@ function Login() {
     email: '',
     password: '',
   })
-  const [resetCredentials, setResetCredentials] = useState({
-    email: '',
-    password: '',
-    confirm_password: '',
-  })
-  const [isResetMode, setIsResetMode] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [login, { isLoading }] = useLoginMutation()
-  const [forgotPassword, { isLoading: isResetLoading }] = useForgotPasswordMutation()
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setCredentials(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleResetInputChange = (e) => {
-    const { name, value } = e.target
-    setResetCredentials(prev => ({ ...prev, [name]: value }))
+    setCredentials((prev) => ({ ...prev, [name]: value }))
   }
 
   useEffect(() => {
@@ -46,8 +33,7 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    
-    // Basic validation
+
     if (!credentials.email || !credentials.password) {
       toastService.show({
         severity: 'warn',
@@ -85,161 +71,59 @@ function Login() {
     }
   }
 
-  const handleForgotPassword = async (e) => {
-    e.preventDefault()
-
-    if (!resetCredentials.email || !resetCredentials.password || !resetCredentials.confirm_password) {
-      toastService.show({
-        severity: 'warn',
-        summary: 'Missing fields',
-        detail: 'Please fill in all fields.',
-        life: 3000,
-      })
-      return
-    }
-
-    if (resetCredentials.password !== resetCredentials.confirm_password) {
-      toastService.show({
-        severity: 'warn',
-        summary: 'Password mismatch',
-        detail: 'New password and confirm password must match.',
-        life: 3000,
-      })
-      return
-    }
-
-    try {
-      await forgotPassword(resetCredentials).unwrap()
-      setCredentials({ email: resetCredentials.email, password: '' })
-      setResetCredentials({ email: '', password: '', confirm_password: '' })
-      setIsResetMode(false)
-    } catch (err) {
-      // handled by baseQueryWithToast
-    }
-  }
-
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <section className="login-panel login-panel--left">
-          <div className="login-left-content">
-            <p className="login-welcome">Welcome to <span>HIMUDA</span></p>
-            <div className="login-logo-ring">
-              <img className="login-logo-image" src={logo} alt="HIMUDA logo" />
-            </div>
-            <p className="login-org">HP Housing & Urban Development Authority</p>
-            <p className="login-tagline">(A Government Undertaking, Himachal Pradesh)</p>
-            <div className="login-divider" />
-            <h1 className="login-title">LEAVE PORTAL</h1>
-          </div>
-        </section>
+    <AuthFrame heading="LOGIN">
+      <form onSubmit={handleLogin}>
+        <label className="login-field" htmlFor="email">
+          <span>Username / E-mail</span>
+          <input
+            type="text"
+            id="email"
+            name="email"
+            placeholder="Enter your username or email"
+            value={credentials.email}
+            onChange={handleInputChange}
+            required
+            autoComplete="username"
+          />
+        </label>
 
-        <section className="login-panel login-panel--right">
-          <div className="login-form">
-            <h2>{isResetMode ? 'RESET PASSWORD' : 'LOGIN'}</h2>
+        <label className="login-field" htmlFor="password">
+          <span>Password</span>
+          <PasswordInput
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            value={credentials.password}
+            onChange={handleInputChange}
+            required
+            autoComplete="current-password"
+          />
+        </label>
 
-            {isResetMode ? (
-              <form onSubmit={handleForgotPassword}>
-                <label className="login-field" htmlFor="reset-email">
-                  <span>Username / E-mail</span>
-                  <input
-                    type="text"
-                    id="reset-email"
-                    name="email"
-                    placeholder="Enter your username or email"
-                    value={resetCredentials.email}
-                    onChange={handleResetInputChange}
-                    required
-                  />
-                </label>
+        <div className="login-options">
+          <label className="login-remember">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span>Remember me</span>
+          </label>
+          <button
+            type="button"
+            className="login-link"
+            onClick={() => navigate('/forgot-password')}
+          >
+            Forgot Password?
+          </button>
+        </div>
 
-                <label className="login-field" htmlFor="reset-password">
-                  <span>New Password</span>
-                  <input
-                    type="password"
-                    id="reset-password"
-                    name="password"
-                    placeholder="Enter new password"
-                    value={resetCredentials.password}
-                    onChange={handleResetInputChange}
-                    required
-                  />
-                </label>
-
-                <label className="login-field" htmlFor="reset-confirm-password">
-                  <span>Confirm Password</span>
-                  <input
-                    type="password"
-                    id="reset-confirm-password"
-                    name="confirm_password"
-                    placeholder="Confirm new password"
-                    value={resetCredentials.confirm_password}
-                    onChange={handleResetInputChange}
-                    required
-                  />
-                </label>
-
-                <div className="login-options login-options--end">
-                  <button type="button" className="login-link" onClick={() => setIsResetMode(false)}>
-                    Back to Login
-                  </button>
-                </div>
-
-                <button type="submit" className="login-submit" disabled={isResetLoading}>
-                  {isResetLoading ? 'RESETTING...' : 'RESET PASSWORD'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleLogin}>
-                <label className="login-field" htmlFor="email">
-                  <span>Username / E-mail</span>
-                  <input
-                    type="text"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your username or email"
-                    value={credentials.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </label>
-
-                <label className="login-field" htmlFor="password">
-                  <span>Password</span>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    placeholder="Enter your password"
-                    value={credentials.password}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </label>
-
-                <div className="login-options">
-                  <label className="login-remember">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    <span>Remember me</span>
-                  </label>
-                  <button type="button" className="login-link" onClick={() => setIsResetMode(true)}>
-                    Forgot Password?
-                  </button>
-                </div>
-
-                <button type="submit" className="login-submit" disabled={isLoading}>
-                  {isLoading ? 'LOGGING IN...' : 'LOGIN'}
-                </button>
-              </form>
-            )}
-          </div>
-        </section>
-      </div>
-    </div>
+        <button type="submit" className="login-submit" disabled={isLoading}>
+          {isLoading ? 'LOGGING IN...' : 'LOGIN'}
+        </button>
+      </form>
+    </AuthFrame>
   )
 }
 

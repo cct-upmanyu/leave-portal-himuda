@@ -26,7 +26,11 @@ function AuthInitializer({ children }) {
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
   })
-  const isPublicRoute = location.pathname === '/login' || location.pathname === '/test'
+  const isPublicRoute =
+    location.pathname === '/login' ||
+    location.pathname === '/forgot-password' ||
+    location.pathname === '/reset-password' ||
+    location.pathname === '/test'
   const isUnauthorized = isError && (error?.status === 401 || error?.status === 403)
   const shouldRestoreSession = Boolean(token) && !user && !forcedLogout
   const showAuthLoader = shouldRestoreSession && (isLoading || (!isSuccess && !isError))

@@ -1117,6 +1117,16 @@ function Approvals({ mode = 'approvals' }) {
                 </button>
               ) : null}
               {canManageLeave(selectedLeave) && isPendingLeave(selectedLeave) ? (
+                <button
+                  type="button"
+                  className="approval-forward-btn"
+                  onClick={() => openAssignManagerModal(selectedLeave)}
+                  disabled={isUpdating}
+                >
+                  Forward
+                </button>
+              ) : null}
+              {canManageLeave(selectedLeave) && isPendingLeave(selectedLeave) ? (
                 <>
                   <button
                     type="button"

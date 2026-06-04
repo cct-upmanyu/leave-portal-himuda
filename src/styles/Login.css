@@ -121,6 +121,13 @@
   color: #1f2a37;
 }
 
+.login-note {
+  margin: -8px 0 18px;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .login-form form {
   display: grid;
   gap: 18px;
@@ -142,6 +149,10 @@
   font-size: 0.95rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   font-family: inherit;
+}
+
+.login-field .password-input-shell__input {
+  padding-right: 3rem;
 }
 
 .login-field input:focus {
