@@ -6,6 +6,7 @@ import {
   useGetNotificationsQuery,
   useUpdateNotificationMutation,
 } from '../redux/api/notificationApi'
+import ConfirmDialog from './ConfirmDialog'
 import PaginationControls from './PaginationControls'
 import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
@@ -64,6 +65,7 @@ function AnnouncementManager() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const filteredItems = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -159,15 +161,24 @@ function AnnouncementManager() {
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = (item) => {
+    setOpenMenuId(null)
+    setDeleteItem(item)
+  }
+
+  const closeDelete = () => {
+    setDeleteItem(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteItem?.id) return
+
     try {
-      if (!window.confirm('Are you sure you want to delete this announcement?')) {
-        return
-      }
-      setOpenMenuId(null)
-      await deleteNotification(id).unwrap()
+      await deleteNotification(deleteItem.id).unwrap()
     } catch (err) {
       setFormError(getErrorMessage(err))
+    } finally {
+      setDeleteItem(null)
     }
   }
 
@@ -240,7 +251,7 @@ function AnnouncementManager() {
                       <button
                         type="button"
                         className="danger"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item)}
                         disabled={isDeleting}
                       >
                         Delete
@@ -253,6 +264,22 @@ function AnnouncementManager() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteItem)}
+        title="Delete Announcement"
+        description="This announcement will be removed from the list."
+        onCancel={closeDelete}
+        onConfirm={confirmDelete}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>{deleteItem?.title || 'This announcement'}</strong>
+          <span>{deleteItem?.url || '-'}</span>
+          <p>Are you sure you want to delete this announcement?</p>
+        </div>
+      </ConfirmDialog>
       <PaginationControls
         currentPage={currentPage}
         endItem={endItem}

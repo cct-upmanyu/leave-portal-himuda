@@ -7,6 +7,7 @@ import {
   useGetLeaveTypesQuery,
   useUpdateLeaveTypeMutation,
 } from '../redux/api/leaveTypeApi'
+import ConfirmDialog from './ConfirmDialog'
 import PaginationControls from './PaginationControls'
 import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
@@ -86,6 +87,7 @@ function LeaveTypeManager() {
   const [detailForm, setDetailForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -175,18 +177,27 @@ function LeaveTypeManager() {
     }
   }
 
-  const handleDelete = async (leaveTypeId) => {
+  const handleDelete = (item) => {
+    setOpenMenuId(null)
+    setDeleteItem(item)
+  }
+
+  const closeDelete = () => {
+    setDeleteItem(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteItem?.id) return
+
     try {
-      if (!window.confirm('Are you sure you want to delete this leave type?')) {
-        return
-      }
-      setOpenMenuId(null)
-      await deleteLeaveType(leaveTypeId).unwrap()
-      if (String(id || '') === String(leaveTypeId)) {
+      await deleteLeaveType(deleteItem.id).unwrap()
+      if (String(id || '') === String(deleteItem.id)) {
         goBackToList()
       }
     } catch (err) {
       setFormError(getErrorMessage(err))
+    } finally {
+      setDeleteItem(null)
     }
   }
 
@@ -398,7 +409,7 @@ function LeaveTypeManager() {
                       <button
                         type="button"
                         className="danger"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item)}
                         disabled={isDeleting}
                       >
                         Delete
@@ -424,6 +435,23 @@ function LeaveTypeManager() {
         totalItems={totalItems}
         totalPages={totalPages}
       />
+
+      <ConfirmDialog
+        open={Boolean(deleteItem)}
+        title="Delete Leave Type"
+        description="This leave type will be removed from the system."
+        onCancel={closeDelete}
+        onConfirm={confirmDelete}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>{deleteItem?.name || 'This leave type'}</strong>
+          <span>{deleteItem?.code || '-'}</span>
+          <p>Are you sure you want to delete this leave type?</p>
+        </div>
+      </ConfirmDialog>
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={closeAddModal}>

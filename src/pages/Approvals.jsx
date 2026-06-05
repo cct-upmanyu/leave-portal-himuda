@@ -13,6 +13,7 @@ import { isAdminUser, isReportingManagerUser } from '../utils/access'
 import { toastService } from '../utils/toastService'
 import ActivityTimeline from '../components/ActivityTimeline'
 import PaginationControls from '../components/PaginationControls'
+import ConfirmDialog from '../components/ConfirmDialog'
 import usePagination from '../utils/usePagination'
 import '../styles/Approvals.css'
 
@@ -1272,44 +1273,25 @@ function Approvals({ mode = 'approvals' }) {
         </div>
       ) : null}
 
-      {deleteConfirmLeave ? (
-        <div className="approval-overlay" onClick={closeDeleteConfirm}>
-          <div className="approval-modal approval-delete-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="approval-modal-head">
-              <div>
-                <h3>Delete Leave Record</h3>
-                <p>This action will permanently remove the selected leave request.</p>
-              </div>
-              <button
-                type="button"
-                className="approval-close-btn"
-                onClick={closeDeleteConfirm}
-                aria-label="Close dialog"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="approval-delete-summary">
-              <strong>{deleteConfirmLeave.employeeName || '-'}</strong>
-              <span>
-                {deleteConfirmLeave.leaveTypeName} | {formatDate(deleteConfirmLeave.startDate)} to{' '}
-                {formatDate(deleteConfirmLeave.endDate)}
-              </span>
-              <p>Delete this leave record and update the leave balance?</p>
-            </div>
-
-            <div className="approval-modal-actions">
-              <button type="button" className="approval-secondary-btn" onClick={closeDeleteConfirm}>
-                Cancel
-              </button>
-              <button type="button" className="approval-reject-btn" onClick={confirmDeleteLeave} disabled={isDeleting}>
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
+      <ConfirmDialog
+        open={Boolean(deleteConfirmLeave)}
+        title="Delete Leave Record"
+        description="This action will permanently remove the selected leave request."
+        onCancel={closeDeleteConfirm}
+        onConfirm={confirmDeleteLeave}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>{deleteConfirmLeave?.employeeName || '-'}</strong>
+          <span>
+            {deleteConfirmLeave?.leaveTypeName || '-'} | {formatDate(deleteConfirmLeave?.startDate)} to{' '}
+            {formatDate(deleteConfirmLeave?.endDate)}
+          </span>
+          <p>Delete this leave record and update the leave balance?</p>
         </div>
-      ) : null}
+      </ConfirmDialog>
 
       {isApplyOpen ? (
         <div className="approval-overlay" onClick={closeApplyModal}>

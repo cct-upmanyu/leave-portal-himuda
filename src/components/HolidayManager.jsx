@@ -8,6 +8,7 @@ import {
   useUpdateHolidayMutation,
 } from '../redux/api/holidayApi'
 import { useGetLookupsQuery } from '../redux/api/lookupApi'
+import ConfirmDialog from './ConfirmDialog'
 import PaginationControls from './PaginationControls'
 import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
@@ -128,6 +129,7 @@ function HolidayManager() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
   const yearMinDate = useMemo(() => getYearDate(selectedYear, 0, 1), [selectedYear])
   const yearMaxDate = useMemo(() => getYearDate(selectedYear, 11, 31), [selectedYear])
   const yearViewDate = useMemo(() => getYearDate(selectedYear, 0, 1), [selectedYear])
@@ -224,15 +226,24 @@ function HolidayManager() {
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = (item) => {
+    setOpenMenuId(null)
+    setDeleteItem(item)
+  }
+
+  const closeDelete = () => {
+    setDeleteItem(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteItem?.id) return
+
     try {
-      if (!window.confirm('Are you sure you want to delete this holiday?')) {
-        return
-      }
-      setOpenMenuId(null)
-      await deleteHoliday(id).unwrap()
+      await deleteHoliday(deleteItem.id).unwrap()
     } catch (err) {
       setFormError(getErrorMessage(err))
+    } finally {
+      setDeleteItem(null)
     }
   }
 
@@ -322,7 +333,7 @@ function HolidayManager() {
                       <button
                         type="button"
                         className="danger"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item)}
                         disabled={isDeleting}
                       >
                         Delete
@@ -343,6 +354,23 @@ function HolidayManager() {
         totalItems={totalItems}
         totalPages={totalPages}
       />
+
+      <ConfirmDialog
+        open={Boolean(deleteItem)}
+        title="Delete Holiday"
+        description="This holiday will be removed from the calendar."
+        onCancel={closeDelete}
+        onConfirm={confirmDelete}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>{deleteItem?.name || 'This holiday'}</strong>
+          <span>{deleteItem ? formatDate(deleteItem.holidayDate) : '-'}</span>
+          <p>Are you sure you want to delete this holiday?</p>
+        </div>
+      </ConfirmDialog>
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddOpen(false)}>

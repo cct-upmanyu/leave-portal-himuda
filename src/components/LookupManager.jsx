@@ -5,6 +5,7 @@ import {
   useGetLookupsQuery,
   useUpdateLookupMutation,
 } from '../redux/api/lookupApi'
+import ConfirmDialog from './ConfirmDialog'
 import PaginationControls from './PaginationControls'
 import usePagination from '../utils/usePagination'
 import '../styles/Settings.css'
@@ -31,6 +32,7 @@ function LookupManager({ table, title }) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [formError, setFormError] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   const items = isError ? [] : data?.data || []
@@ -129,15 +131,24 @@ function LookupManager({ table, title }) {
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = (item) => {
+    setOpenMenuId(null)
+    setDeleteItem(item)
+  }
+
+  const closeDelete = () => {
+    setDeleteItem(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteItem?.id) return
+
     try {
-      if (!window.confirm('Are you sure you want to delete this record?')) {
-        return
-      }
-      setOpenMenuId(null)
-      await deleteLookup({ table, id }).unwrap()
+      await deleteLookup({ table, id: deleteItem.id }).unwrap()
     } catch (err) {
       setFormError(getErrorMessage(err))
+    } finally {
+      setDeleteItem(null)
     }
   }
 
@@ -235,7 +246,7 @@ function LookupManager({ table, title }) {
                           <button
                             type="button"
                             className="danger"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item)}
                             disabled={isDeleting}
                           >
                             Delete
@@ -258,6 +269,23 @@ function LookupManager({ table, title }) {
         totalItems={totalItems}
         totalPages={totalPages}
       />
+
+      <ConfirmDialog
+        open={Boolean(deleteItem)}
+        title="Delete Record"
+        description={`This ${table.replace(/_/g, ' ')} record will be removed from the system.`}
+        onCancel={closeDelete}
+        onConfirm={confirmDelete}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>{deleteItem?.name || 'This record'}</strong>
+          <span>{table.replace(/_/g, ' ')}</span>
+          <p>Are you sure you want to delete this record?</p>
+        </div>
+      </ConfirmDialog>
 
       {isAddOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddOpen(false)}>

@@ -13,6 +13,7 @@ import {
 } from '../redux/api/employeeApi'
 import PaginationControls from '../components/PaginationControls'
 import PasswordInput from '../components/PasswordInput'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { isAdminUser } from '../utils/access'
 import usePagination from '../utils/usePagination'
 import '../styles/Employees.css'
@@ -844,6 +845,31 @@ function Employees() {
         />
       </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(isAdmin && deleteEmployeeConfirm)}
+        title="Delete Employee"
+        description={`This will permanently remove ${
+          `${deleteEmployeeConfirm?.first_name || ''} ${deleteEmployeeConfirm?.last_name || ''}`.trim() ||
+          deleteEmployeeConfirm?.user_name ||
+          'this employee'
+        }.`}
+        onCancel={closeDeleteEmployeeConfirm}
+        onConfirm={confirmDeleteEmployee}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmClassName="danger"
+        isLoading={isDeleting}
+      >
+        <div className="confirm-dialog-summary">
+          <strong>
+            {`${deleteEmployeeConfirm?.first_name || ''} ${deleteEmployeeConfirm?.last_name || ''}`.trim() ||
+              deleteEmployeeConfirm?.user_name ||
+              'this employee'}
+          </strong>
+          <span>{deleteEmployeeConfirm ? formatEmployeeCode(deleteEmployeeConfirm) : '-'}</span>
+          <p>This action cannot be undone.</p>
+        </div>
+      </ConfirmDialog>
 
       {isAdmin && passwordEmployee && (
         <div className="employee-modal-backdrop" onClick={closePasswordModal}>
