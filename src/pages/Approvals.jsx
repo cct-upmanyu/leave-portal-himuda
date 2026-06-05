@@ -256,6 +256,7 @@ function Approvals({ mode = 'approvals' }) {
   const [rejectingLeave, setRejectingLeave] = useState(null)
   const [rejectionNote, setRejectionNote] = useState('')
   const [form, setForm] = useState(emptyForm)
+  const closeActiveMenu = () => setActiveMenuId(null)
   const assignableManagers = useMemo(() => {
     const employee = employeeMap.get(String(assignManagerLeave?.userId || ''))
     const employeeUserId = getEmployeeUserId(employee) || String(assignManagerLeave?.userId || '')
@@ -371,6 +372,12 @@ function Approvals({ mode = 'approvals' }) {
     }
   }, [normalizedLeaves, selectedLeave])
 
+  useEffect(() => {
+    if (selectedLeave || assignManagerLeave || rejectingLeave || isApplyOpen) {
+      closeActiveMenu()
+    }
+  }, [assignManagerLeave, isApplyOpen, rejectingLeave, selectedLeave])
+
   const handleMenuToggle = (event, id) => {
     event.stopPropagation()
     setActiveMenuId((current) => (current === id ? null : id))
@@ -378,7 +385,7 @@ function Approvals({ mode = 'approvals' }) {
 
   const openLeaveDetails = (leave) => {
     setSelectedLeave(leave)
-    setActiveMenuId(null)
+    closeActiveMenu()
   }
 
   const canEditOwnLeave = (leave) =>
@@ -408,21 +415,21 @@ function Approvals({ mode = 'approvals' }) {
       absenceAddress: leave.addressDuringLeave || '',
     })
     setIsApplyOpen(true)
-    setActiveMenuId(null)
+    closeActiveMenu()
   }
 
   const openAssignManagerModal = (leave) => {
     if (!isPendingLeave(leave)) return
     setAssignManagerLeave(leave)
     setSelectedManagerId(String(leave?.reportingManagerId || ''))
-    setActiveMenuId(null)
+    closeActiveMenu()
   }
 
   const openRejectModal = (leave) => {
     if (!isPendingLeave(leave)) return
     setRejectingLeave(leave)
     setRejectionNote('')
-    setActiveMenuId(null)
+    closeActiveMenu()
   }
 
   const closeRejectModal = () => {
@@ -433,7 +440,7 @@ function Approvals({ mode = 'approvals' }) {
   const handleStatusUpdate = async (leave, status) => {
     const nextStatus = status === 'rejected' ? 'cancelled' : status
     await updateLeave({ id: leave.id, status: nextStatus }).unwrap()
-    setActiveMenuId(null)
+    closeActiveMenu()
     if (selectedLeave?.id === leave.id) {
       setSelectedLeave({ ...selectedLeave, status: nextStatus })
     }
@@ -649,7 +656,7 @@ function Approvals({ mode = 'approvals' }) {
     if (!confirmed) return
 
     await deleteLeave(leave.id).unwrap()
-    setActiveMenuId(null)
+    closeActiveMenu()
     if (selectedLeave?.id === leave.id) {
       setSelectedLeave(null)
     }
@@ -787,10 +794,11 @@ function Approvals({ mode = 'approvals' }) {
                     </td>
                     <td className="approval-reason-cell">{leave.reason || '-'}</td>
                     <td className="approvals-action-cell">
-                      <div className="approval-menu-wrap">
+                      <div className="approval-menu-wrap" onClick={(event) => event.stopPropagation()}>
                         <button
                           type="button"
                           className="approval-menu-trigger"
+                          aria-expanded={activeMenuId === leave.id}
                           onClick={(event) => handleMenuToggle(event, leave.id)}
                           aria-label={`Open actions for ${leave.employeeName || 'leave request'}`}
                         >

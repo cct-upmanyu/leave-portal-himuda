@@ -204,7 +204,6 @@
   justify-content: center;
   overflow: visible !important;
   min-width: 44px;
-  z-index: 50;
 }
 
 .approval-menu-trigger {
@@ -220,6 +219,15 @@
   gap: 3px;
   cursor: pointer;
   border-radius: 999px;
+}
+
+.approval-menu-trigger:focus {
+  outline: none;
+}
+
+.approval-menu-trigger:focus-visible {
+  outline: 2px solid #6c9bb9;
+  outline-offset: 2px;
 }
 
 .approval-menu-trigger span {
@@ -238,12 +246,12 @@
   border: 1px solid #d6e0e8;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
-  z-index: 5000;
+  z-index: 1000;
   overflow: visible;
   display: grid;
 }
 
-.approvals-table tbody tr:last-child .approval-menu {
+.approvals-table tbody tr:nth-last-child(-n + 2) .approval-menu {
   top: auto;
   bottom: 44px;
 }
@@ -289,7 +297,7 @@
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  z-index: 30;
+  z-index: 6000;
 }
 
 .approval-modal {
