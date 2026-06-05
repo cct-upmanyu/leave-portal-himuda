@@ -171,6 +171,7 @@ function Employees() {
   const [sameAddress, setSameAddress] = useState(false)
   const [formError, setFormError] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [deleteEmployeeConfirm, setDeleteEmployeeConfirm] = useState(null)
 
   const { data: employeesData, isLoading, isFetching } = useGetEmployeesQuery()
   const { data: departmentsData } = useGetLookupsQuery('departments')
@@ -402,17 +403,24 @@ function Employees() {
     }
   }
 
-  const handleDelete = async (employee) => {
+  const handleDelete = (employee) => {
     setMenuOpenId(null)
-    const name = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'this employee'
-    if (!window.confirm(`Are you sure you want to delete ${name}?`)) {
-      return
-    }
+    setDeleteEmployeeConfirm(employee)
+  }
+
+  const closeDeleteEmployeeConfirm = () => {
+    setDeleteEmployeeConfirm(null)
+  }
+
+  const confirmDeleteEmployee = async () => {
+    if (!deleteEmployeeConfirm?.id) return
 
     try {
-      await deleteEmployee(employee.id).unwrap()
+      await deleteEmployee(deleteEmployeeConfirm.id).unwrap()
     } catch (_) {
       // Toasts are already handled centrally by the base query.
+    } finally {
+      setDeleteEmployeeConfirm(null)
     }
   }
 
@@ -896,6 +904,52 @@ function Employees() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && deleteEmployeeConfirm && (
+        <div className="employee-modal-backdrop" onClick={closeDeleteEmployeeConfirm}>
+          <div className="employee-modal employee-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="employee-modal-header">
+              <div>
+                <h3>Delete Employee</h3>
+                <p>
+                  This will permanently remove{' '}
+                  {`${deleteEmployeeConfirm.first_name || ''} ${deleteEmployeeConfirm.last_name || ''}`.trim() ||
+                    deleteEmployeeConfirm.user_name ||
+                    'this employee'}
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                className="employee-modal-close"
+                onClick={closeDeleteEmployeeConfirm}
+                aria-label="Close dialog"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="employee-delete-summary">
+              <strong>
+                {`${deleteEmployeeConfirm.first_name || ''} ${deleteEmployeeConfirm.last_name || ''}`.trim() ||
+                  deleteEmployeeConfirm.user_name ||
+                  'this employee'}
+              </strong>
+              <span>{formatEmployeeCode(deleteEmployeeConfirm)}</span>
+              <p>This action cannot be undone.</p>
+            </div>
+
+            <div className="form-actions employee-delete-actions">
+              <button type="button" className="btn btn-secondary" onClick={closeDeleteEmployeeConfirm}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-danger" onClick={confirmDeleteEmployee} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

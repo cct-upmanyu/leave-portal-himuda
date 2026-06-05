@@ -108,6 +108,15 @@
   color: #30475b;
 }
 
+.btn-danger {
+  background: #f8dede;
+  color: #9f2f2f;
+}
+
+.btn-danger:hover {
+  background: #f3d0d0;
+}
+
 .employee-table-wrap {
   position: relative;
   overflow-x: auto;
@@ -284,6 +293,11 @@
   padding: 22px;
 }
 
+.employee-delete-modal {
+  width: min(540px, 96vw);
+  padding: 22px;
+}
+
 .employee-modal-header {
   display: flex;
   justify-content: space-between;
@@ -328,6 +342,36 @@
   background: transparent;
   color: #1f4d6a;
   outline: none;
+}
+
+.employee-delete-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid #d7dee8;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.employee-delete-summary strong {
+  color: #1f2a44;
+  font-size: 16px;
+}
+
+.employee-delete-summary span {
+  color: #5b6a80;
+  font-size: 14px;
+}
+
+.employee-delete-summary p {
+  margin: 0;
+  color: #8b3d3d;
+  font-size: 14px;
+}
+
+.employee-delete-actions {
+  justify-content: flex-end;
 }
 
 .employee-form {

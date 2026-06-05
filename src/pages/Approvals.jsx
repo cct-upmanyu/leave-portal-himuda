@@ -255,6 +255,7 @@ function Approvals({ mode = 'approvals' }) {
   const [selectedManagerId, setSelectedManagerId] = useState('')
   const [rejectingLeave, setRejectingLeave] = useState(null)
   const [rejectionNote, setRejectionNote] = useState('')
+  const [deleteConfirmLeave, setDeleteConfirmLeave] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const closeActiveMenu = () => setActiveMenuId(null)
   const assignableManagers = useMemo(() => {
@@ -646,18 +647,23 @@ function Approvals({ mode = 'approvals' }) {
     })
   }
 
-  const handleDeleteLeave = async (leave) => {
+  const handleDeleteLeave = (leave) => {
     if (!isAdmin || !leave?.id) return
 
-    const confirmed = window.confirm(
-      `Delete this leave record for ${leave.employeeName || 'this employee'}? This will remove it from the database and update leave balance.`,
-    )
-
-    if (!confirmed) return
-
-    await deleteLeave(leave.id).unwrap()
     closeActiveMenu()
-    if (selectedLeave?.id === leave.id) {
+    setDeleteConfirmLeave(leave)
+  }
+
+  const closeDeleteConfirm = () => {
+    setDeleteConfirmLeave(null)
+  }
+
+  const confirmDeleteLeave = async () => {
+    if (!deleteConfirmLeave?.id) return
+
+    await deleteLeave(deleteConfirmLeave.id).unwrap()
+    setDeleteConfirmLeave(null)
+    if (selectedLeave?.id === deleteConfirmLeave.id) {
       setSelectedLeave(null)
     }
   }
@@ -1262,6 +1268,45 @@ function Approvals({ mode = 'approvals' }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteConfirmLeave ? (
+        <div className="approval-overlay" onClick={closeDeleteConfirm}>
+          <div className="approval-modal approval-delete-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="approval-modal-head">
+              <div>
+                <h3>Delete Leave Record</h3>
+                <p>This action will permanently remove the selected leave request.</p>
+              </div>
+              <button
+                type="button"
+                className="approval-close-btn"
+                onClick={closeDeleteConfirm}
+                aria-label="Close dialog"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="approval-delete-summary">
+              <strong>{deleteConfirmLeave.employeeName || '-'}</strong>
+              <span>
+                {deleteConfirmLeave.leaveTypeName} | {formatDate(deleteConfirmLeave.startDate)} to{' '}
+                {formatDate(deleteConfirmLeave.endDate)}
+              </span>
+              <p>Delete this leave record and update the leave balance?</p>
+            </div>
+
+            <div className="approval-modal-actions">
+              <button type="button" className="approval-secondary-btn" onClick={closeDeleteConfirm}>
+                Cancel
+              </button>
+              <button type="button" className="approval-reject-btn" onClick={confirmDeleteLeave} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
