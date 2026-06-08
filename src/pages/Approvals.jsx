@@ -17,12 +17,114 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import usePagination from '../utils/usePagination'
 import '../styles/Approvals.css'
 
+const IST_TIME_ZONE = 'Asia/Kolkata'
+
+const pad2 = (value) => String(value).padStart(2, '0')
+
+const getDateParts = (value) => {
+  if (!value && value !== 0) return null
+
+  if (value instanceof Date) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: IST_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(value)
+
+    const mapped = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+    return {
+      year: mapped.year,
+      month: mapped.month,
+      day: mapped.day,
+      hour: mapped.hour,
+      minute: mapped.minute,
+      second: mapped.second,
+      hasTime: true,
+      isLiteral: false,
+    }
+  }
+
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const literalMatch = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/,
+  )
+  if (literalMatch) {
+    const [, year, month, day, hour = '00', minute = '00', second = '00'] = literalMatch
+    return {
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      hasTime: Boolean(literalMatch[4]),
+      isLiteral: true,
+    }
+  }
+
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) return null
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: IST_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(parsed)
+  const mapped = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return {
+    year: mapped.year,
+    month: mapped.month,
+    day: mapped.day,
+    hour: mapped.hour,
+    minute: mapped.minute,
+    second: mapped.second,
+    hasTime: true,
+    isLiteral: false,
+  }
+}
+
+const getDateOnlyValue = (value) => {
+  const parts = getDateParts(value)
+  if (!parts) return null
+  return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))
+}
+
+const formatDateFromParts = (parts) => {
+  if (!parts) return '-'
+  const date = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST_TIME_ZONE,
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
+const formatTimeFromParts = (parts) => {
+  if (!parts?.hasTime) return ''
+  const hour24 = Number(parts.hour)
+  const minute = pad2(parts.minute)
+  const second = pad2(parts.second)
+  const period = hour24 >= 12 ? 'PM' : 'AM'
+  const hour12 = hour24 % 12 || 12
+  return `${pad2(hour12)}:${minute}${second === '00' ? '' : `:${second}`} ${period}`
+}
+
 const getTodayString = () => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const parts = getDateParts(new Date())
+  return parts ? `${parts.year}-${parts.month}-${parts.day}` : ''
 }
 
 const TODAY = getTodayString()
@@ -45,26 +147,18 @@ const emptyForm = {
 
 const formatDate = (value) => {
   if (!value) return '-'
-  const parsed = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleDateString('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-  })
+  const parts = getDateParts(value)
+  if (!parts) return value
+  return formatDateFromParts(parts)
 }
 
 const formatDateTime = (value) => {
   if (!value) return '-'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleString('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const parts = getDateParts(value)
+  if (!parts) return value
+  const dateLabel = formatDateFromParts(parts)
+  const timeLabel = formatTimeFromParts(parts)
+  return timeLabel ? `${dateLabel}, ${timeLabel}` : dateLabel
 }
 
 const getEmployeeName = (employee) => {
@@ -93,14 +187,14 @@ const getLeaveDateOptions = (startDate, endDate) => {
 const getDaysLabel = ({ startDate, endDate, halfLeave, shortLeave, halfLeaveDate, shortLeaveDate }) => {
   if (!startDate || !endDate) return { value: 0, label: '0 Day' }
 
-  const start = new Date(`${startDate}T00:00:00`)
-  const end = new Date(`${endDate}T00:00:00`)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+  const startValue = getDateOnlyValue(startDate)
+  const endValue = getDateOnlyValue(endDate)
+  if (!Number.isFinite(startValue) || !Number.isFinite(endValue)) {
     return { value: 0, label: '0 Day' }
   }
 
   const millisecondsPerDay = 24 * 60 * 60 * 1000
-  const totalDays = Math.max(1, Math.round((end - start) / millisecondsPerDay) + 1)
+  const totalDays = Math.max(1, Math.round((endValue - startValue) / millisecondsPerDay) + 1)
   const selectedPartialDate = shortLeave ? shortLeaveDate : halfLeave ? halfLeaveDate : ''
   const canReduce = Boolean(selectedPartialDate && selectedPartialDate >= startDate && selectedPartialDate <= endDate)
   const partialReduction = shortLeave ? 0.75 : 0.5
@@ -251,6 +345,7 @@ function Approvals({ mode = 'approvals' }) {
   const [isApplyOpen, setIsApplyOpen] = useState(false)
   const [editingLeave, setEditingLeave] = useState(null)
   const [activeMenuId, setActiveMenuId] = useState(null)
+  const [activeMenuDirection, setActiveMenuDirection] = useState('down')
   const [selectedLeave, setSelectedLeave] = useState(null)
   const [assignManagerLeave, setAssignManagerLeave] = useState(null)
   const [selectedManagerId, setSelectedManagerId] = useState('')
@@ -382,7 +477,21 @@ function Approvals({ mode = 'approvals' }) {
 
   const handleMenuToggle = (event, id) => {
     event.stopPropagation()
-    setActiveMenuId((current) => (current === id ? null : id))
+    const isSameMenu = activeMenuId === id
+    if (isSameMenu) {
+      setActiveMenuId(null)
+      setActiveMenuDirection('down')
+      return
+    }
+
+    const triggerRect = event.currentTarget.getBoundingClientRect()
+    const estimatedMenuHeight = 44 * 5 + 12
+    const spaceBelow = window.innerHeight - triggerRect.bottom
+    const spaceAbove = triggerRect.top
+    const direction = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow ? 'up' : 'down'
+
+    setActiveMenuDirection(direction)
+    setActiveMenuId(id)
   }
 
   const openLeaveDetails = (leave) => {
@@ -814,7 +923,12 @@ function Approvals({ mode = 'approvals' }) {
                           <span />
                         </button>
                         {activeMenuId === leave.id ? (
-                          <div className="approval-menu" onClick={(event) => event.stopPropagation()}>
+                          <div
+                            className={`approval-menu ${
+                              activeMenuDirection === 'up' ? 'approval-menu-up' : 'approval-menu-down'
+                            }`}
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <button type="button" onClick={() => openLeaveDetails(leave)}>
                               View
                             </button>
@@ -918,7 +1032,7 @@ function Approvals({ mode = 'approvals' }) {
 
             <div className="approval-summary-strip">
               <div>
-                <span>Total Leaves</span>
+                <span>Total Leave Requests</span>
                 <strong>{selectedEmployeeHistory.length}</strong>
               </div>
               <div>

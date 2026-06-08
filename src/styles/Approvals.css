@@ -242,18 +242,27 @@
   top: 44px;
   right: 0;
   min-width: 190px;
+  max-height: min(260px, calc(100vh - 120px));
   background: #ffffff;
   border: 1px solid #d6e0e8;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
   z-index: 1000;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   display: grid;
 }
 
-.approvals-table tbody tr:nth-last-child(-n + 2) .approval-menu {
+.approval-menu-up {
   top: auto;
   bottom: 44px;
+}
+
+.approval-menu-down {
+  top: 44px;
+  bottom: auto;
 }
 
 .approval-menu button {

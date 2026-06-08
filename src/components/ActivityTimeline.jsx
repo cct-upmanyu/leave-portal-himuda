@@ -15,6 +15,40 @@ const formatDateTime = (value) => {
   })
 }
 
+const formatBalanceValue = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return ''
+  if (Number.isInteger(numeric)) return String(numeric)
+  return numeric.toFixed(2)
+}
+
+const getActivityDetails = (log) => {
+  const metadata = log?.metadata || {}
+  const details = []
+
+  if (metadata.reason) {
+    details.push(`Reason: ${metadata.reason}`)
+  }
+
+  if (metadata.remarks) {
+    details.push(`Remarks: ${metadata.remarks}`)
+  }
+
+  if (String(log?.moduleName || '') === 'leave_balances' && String(log?.actionType || '') === 'manual_adjustment') {
+    const previous = formatBalanceValue(metadata.previousRemainingBalance)
+    const next = formatBalanceValue(metadata.remainingBalance)
+    if (previous || next) {
+      details.push(`Customized balance: ${previous || '-'} -> ${next || '-'}`)
+    }
+    if (Number.isFinite(Number(metadata.delta)) && Number(metadata.delta) !== 0) {
+      const delta = Number(metadata.delta)
+      details.push(`Change: ${delta > 0 ? '+' : ''}${formatBalanceValue(delta)}`)
+    }
+  }
+
+  return details
+}
+
 function ActivityTimeline({
   title = 'Activity Timeline',
   description = 'Recent changes for this record.',
@@ -88,6 +122,13 @@ function ActivityTimeline({
                   <span>{log.targetName || log.entityId || '-'}</span>
                 </div>
                 {log.message ? <p>{log.message}</p> : null}
+                {getActivityDetails(log).length ? (
+                  <div className="activity-timeline-extra">
+                    {getActivityDetails(log).map((detail) => (
+                      <span key={detail}>{detail}</span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}
