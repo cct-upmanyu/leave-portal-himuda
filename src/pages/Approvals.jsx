@@ -206,6 +206,11 @@ const getDaysLabel = ({ startDate, endDate, halfLeave, shortLeave, halfLeaveDate
   }
 }
 
+const getJoiningDate = (employee) => {
+  if (!employee?.date_of_joining) return ''
+  return String(employee.date_of_joining).slice(0, 10)
+}
+
 const statusLabel = (status) => {
   const normalized = String(status || 'pending').toLowerCase()
   if (normalized === 'cancelled') return 'Cancelled'
@@ -654,6 +659,11 @@ function Approvals({ mode = 'approvals' }) {
 
     setForm((current) => {
       const next = { ...current, [name]: nextValue }
+      const employeeForForm =
+        name === 'employeeId'
+          ? employees.find((item) => getEmployeeUserId(item) === String(value)) || null
+          : employees.find((item) => getEmployeeUserId(item) === String(current.employeeId)) || null
+      const joiningDate = getJoiningDate(employeeForForm)
 
       if (name === 'outOfStation' && !checked) {
         next.leaveDateTime = ''
@@ -661,7 +671,21 @@ function Approvals({ mode = 'approvals' }) {
         next.absenceAddress = ''
       }
 
+      if (name === 'employeeId' && joiningDate) {
+        if (next.startDate && next.startDate < joiningDate) {
+          next.startDate = joiningDate
+        }
+        if (next.endDate && next.endDate < joiningDate) {
+          next.endDate = joiningDate
+        }
+      }
+
       if (name === 'startDate') {
+        if (joiningDate && value < joiningDate) {
+          next.startDate = joiningDate
+          next.endDate = joiningDate
+          return next
+        }
         if (!current.endDate || current.endDate < value) {
           next.endDate = value
         }
@@ -700,6 +724,17 @@ function Approvals({ mode = 'approvals' }) {
     event.preventDefault()
     const employee =
       employees.find((item) => getEmployeeUserId(item) === String(form.employeeId)) || null
+    const joiningDate = getJoiningDate(employee)
+
+    if (joiningDate && form.startDate && form.startDate < joiningDate) {
+      toastService.show({
+        severity: 'warn',
+        summary: 'Invalid start date',
+        detail: `Leave cannot start before the employee joining date (${formatDate(joiningDate)}).`,
+        life: 3500,
+      })
+      return
+    }
 
     const payload = {
       userId: form.employeeId,
@@ -806,6 +841,10 @@ function Approvals({ mode = 'approvals' }) {
         reporting_manager: selectedLeave.reportingManagerId || null,
       }
     : null
+  const selectedFormEmployee = employees.find(
+    (employee) => String(getEmployeeUserId(employee)) === String(form.employeeId),
+  )
+  const formJoiningDate = getJoiningDate(selectedFormEmployee)
   const selectedEmployeeHistory = selectedLeave
     ? leaveHistoryByEmployee.get(String(selectedLeave.userId)) || []
     : []
@@ -1461,6 +1500,7 @@ function Approvals({ mode = 'approvals' }) {
                     name="startDate"
                     value={form.startDate}
                     onChange={handleFormChange}
+                    min={formJoiningDate || undefined}
                     required
                   />
                 </label>
@@ -1479,7 +1519,7 @@ function Approvals({ mode = 'approvals' }) {
               </div>
 
               <div className="approval-date-note">
-                You can select any leave dates. End date starts from the selected start date.
+                Leave can only start on or after the employee joining date. End date starts from the selected start date.
               </div>
 
               <div className="approval-toggle-row">
