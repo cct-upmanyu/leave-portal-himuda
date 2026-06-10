@@ -212,13 +212,20 @@ function EmployeeDetail() {
   const [balanceForm, setBalanceForm] = useState({ remainingBalance: '', remarks: '' })
   const [balanceError, setBalanceError] = useState('')
   const [timelineRefreshKey, setTimelineRefreshKey] = useState(0)
+  const [leaveBalancesRefreshKey, setLeaveBalancesRefreshKey] = useState(0)
 
   const { data: employeeResponse, isLoading, isFetching, error } = useGetEmployeeByIdQuery(id, {
     skip: !id,
   })
-  const { data: leaveBalancesResponse, isFetching: isLeaveBalancesFetching } = useGetEmployeeLeaveBalancesQuery(id, {
+  const {
+    data: leaveBalancesResponse,
+    isFetching: isLeaveBalancesFetching,
+  } = useGetEmployeeLeaveBalancesQuery(
+    { id, refreshKey: leaveBalancesRefreshKey },
+    {
     skip: !id,
-  })
+    },
+  )
   const { data: leavesResponse } = useGetLeavesQuery()
   const { data: leaveTypesResponse } = useGetLeaveTypesQuery()
   const { data: departmentsData } = useGetLookupsQuery('departments')
@@ -458,6 +465,7 @@ function EmployeeDetail() {
         remainingBalance: balanceForm.remainingBalance,
         remarks: balanceForm.remarks,
       }).unwrap()
+      setLeaveBalancesRefreshKey((current) => current + 1)
       setTimelineRefreshKey((current) => current + 1)
       closeBalanceModal()
     } catch (submitError) {
@@ -962,7 +970,7 @@ function EmployeeDetail() {
             <div className="employee-modal-header">
               <div>
                 <h3>Update Leave Balance</h3>
-                <p>Set the employee-specific total and remaining balance for {selectedBalance.name}.</p>
+                <p>Set the employee-specific remaining balance for {selectedBalance.name}.</p>
               </div>
               <button type="button" className="employee-modal-close" onClick={closeBalanceModal} aria-label="Close dialog">
                 &times;
@@ -990,7 +998,7 @@ function EmployeeDetail() {
                     <input type="text" value={formatBalanceValue(selectedBalance.used || 0)} disabled />
                   </div>
                   <div className="form-group">
-                    <label>New Employee Balance *</label>
+                    <label>New Remaining Balance *</label>
                     <input
                       type="number"
                       min="0"

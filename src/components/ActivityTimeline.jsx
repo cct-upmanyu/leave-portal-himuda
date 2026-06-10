@@ -4,7 +4,11 @@ import '../styles/ActivityLogs.css'
 
 const formatDateTime = (value) => {
   if (!value) return '-'
-  const parsed = new Date(value)
+  const normalizedValue =
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+      ? value.replace(' ', 'T')
+      : value
+  const parsed = new Date(normalizedValue)
   if (Number.isNaN(parsed.getTime())) return value
   return parsed.toLocaleString('en-IN', {
     day: '2-digit',
@@ -38,7 +42,7 @@ const getActivityDetails = (log) => {
     const previous = formatBalanceValue(metadata.previousRemainingBalance)
     const next = formatBalanceValue(metadata.remainingBalance)
     if (previous || next) {
-      details.push(`Customized balance: ${previous || '-'} -> ${next || '-'}`)
+      details.push(`Remaining balance: ${previous || '-'} -> ${next || '-'}`)
     }
     if (Number.isFinite(Number(metadata.delta)) && Number(metadata.delta) !== 0) {
       const delta = Number(metadata.delta)
@@ -90,9 +94,28 @@ function ActivityTimeline({
 
   const logs = useMemo(() => {
     const merged = [...(directData?.data || []), ...(relatedData?.data || [])]
-    const uniqueLogs = Array.from(new Map(merged.map((item) => [String(item.id), item])).values())
+    const uniqueLogs = Array.from(
+      new Map(
+        merged.map((item) => [
+          String(item.id || `${item.createdAt || ''}|${item.actionType || ''}|${item.message || ''}`),
+          item,
+        ]),
+      ).values(),
+    )
     return uniqueLogs
-      .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))
+      .sort((left, right) => {
+        const leftTime = new Date(
+          typeof left.createdAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(left.createdAt)
+            ? left.createdAt.replace(' ', 'T')
+            : left.createdAt || 0,
+        ).getTime()
+        const rightTime = new Date(
+          typeof right.createdAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(right.createdAt)
+            ? right.createdAt.replace(' ', 'T')
+            : right.createdAt || 0,
+        ).getTime()
+        return rightTime - leftTime
+      })
       .slice(0, limit)
   }, [directData?.data, limit, relatedData?.data])
 

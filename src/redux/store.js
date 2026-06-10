@@ -6,6 +6,7 @@ import { employeeApi } from './api/employeeApi'
 import { holidayApi } from './api/holidayApi'
 import { leaveApi } from './api/leaveApi'
 import { leaveTypeApi } from './api/leaveTypeApi'
+import { internalNotificationApi } from './api/internalNotificationApi'
 import { lookupApi } from './api/lookupApi'
 import { notificationApi } from './api/notificationApi'
 import authReducer from './slices/authSlice'
@@ -19,6 +20,7 @@ export const store = configureStore({
     [holidayApi.reducerPath]: holidayApi.reducer,
     [leaveApi.reducerPath]: leaveApi.reducer,
     [leaveTypeApi.reducerPath]: leaveTypeApi.reducer,
+    [internalNotificationApi.reducerPath]: internalNotificationApi.reducer,
     [lookupApi.reducerPath]: lookupApi.reducer,
     [notificationApi.reducerPath]: notificationApi.reducer,
   },
@@ -30,6 +32,7 @@ export const store = configureStore({
       holidayApi.middleware,
       leaveApi.middleware,
       leaveTypeApi.middleware,
+      internalNotificationApi.middleware,
       lookupApi.middleware,
       notificationApi.middleware,
     ),

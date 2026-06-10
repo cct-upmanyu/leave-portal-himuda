@@ -5,11 +5,13 @@ export const activityLogApi = createApi({
   reducerPath: 'activityLogApi',
   baseQuery: baseQueryWithToast,
   tagTypes: ['ActivityLog'],
+  keepUnusedDataFor: 0,
   endpoints: (builder) => ({
     getActivityLogs: builder.query({
       query: (params = {}) => ({
         url: '/api/activity-logs',
         params,
+        cache: 'no-store',
       }),
       providesTags: (result) =>
         result?.data

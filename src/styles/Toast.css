@@ -1,0 +1,53 @@
+.app-toast-host {
+  z-index: 20000;
+  position: fixed;
+}
+
+.app-toast-host .p-toast {
+  z-index: 20000;
+}
+
+.app-toast-host .p-toast-message {
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.app-toast-host .p-toast-message-content {
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.app-toast-host .p-toast-summary {
+  font-weight: 700;
+}
+
+.app-toast-host .p-toast-detail {
+  opacity: 1;
+  color: inherit;
+}
+
+.app-toast-host .p-toast-message-success {
+  background: #ecfdf3;
+  color: #14532d;
+}
+
+.app-toast-host .p-toast-message-info {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.app-toast-host .p-toast-message-warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.app-toast-host .p-toast-message-error {
+  background: #fef2f2;
+  color: #991b1b;
+}

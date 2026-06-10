@@ -5,18 +5,35 @@ export const employeeApi = createApi({
   reducerPath: 'employeeApi',
   baseQuery: baseQueryWithToast,
   tagTypes: ['Employees', 'Managers', 'EmployeeBalances'],
+  keepUnusedDataFor: 0,
   endpoints: (builder) => ({
     getEmployees: builder.query({
-      query: () => '/api/employees',
+      query: () => ({
+        url: '/api/employees',
+        cache: 'no-store',
+      }),
       providesTags: ['Employees'],
     }),
     getEmployeeById: builder.query({
-      query: (id) => `/api/employees/${id}`,
+      query: (id) => ({
+        url: `/api/employees/${id}`,
+        cache: 'no-store',
+      }),
       providesTags: (result, error, id) => [{ type: 'Employees', id }],
+      refetchOnMountOrArgChange: true,
     }),
     getEmployeeLeaveBalances: builder.query({
-      query: (id) => `/api/employees/${id}/leave-balances`,
-      providesTags: (result, error, id) => [{ type: 'EmployeeBalances', id }],
+      query: (arg) => {
+        const id = typeof arg === 'object' && arg !== null ? arg.id : arg
+        return {
+          url: `/api/employees/${id}/leave-balances`,
+          cache: 'no-store',
+        }
+      },
+      providesTags: (result, error, arg) => [
+        { type: 'EmployeeBalances', id: typeof arg === 'object' && arg !== null ? arg.id : arg },
+      ],
+      refetchOnMountOrArgChange: true,
     }),
     createEmployee: builder.mutation({
       query: (payload) => ({

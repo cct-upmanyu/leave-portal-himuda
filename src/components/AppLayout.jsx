@@ -9,6 +9,7 @@ import { clearAuthToken } from '../utils/authToken'
 import { getUserDisplayName, getUserRoleLabel } from '../utils/access'
 import { toastService } from '../utils/toastService'
 import PasswordInput from './PasswordInput'
+import NotificationBell from './NotificationBell'
 
 const getTitle = (pathname) => {
   if (pathname.startsWith('/settings')) {
@@ -163,6 +164,7 @@ function AppLayout() {
             </div>
           </div>
           <div className="topbar-actions">
+            <NotificationBell />
             <div className="topbar-profile" ref={profileMenuRef}>
               <button
                 type="button"

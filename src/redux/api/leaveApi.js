@@ -1,5 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { baseQueryWithToast } from './baseQueryWithToast'
+import { internalNotificationApi } from './internalNotificationApi'
 
 export const leaveApi = createApi({
   reducerPath: 'leaveApi',
@@ -27,6 +28,18 @@ export const leaveApi = createApi({
         body: payload,
       }),
       invalidatesTags: [{ type: 'Leaves', id: 'LIST' }],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(
+            internalNotificationApi.util.invalidateTags([
+              { type: 'InternalNotification', id: 'LIST' },
+            ]),
+          )
+        } catch (error) {
+          // The leave mutation already surfaces errors through the shared toast layer.
+        }
+      },
     }),
     updateLeave: builder.mutation({
       query: ({ id, ...payload }) => ({

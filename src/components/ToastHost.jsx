@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Toast } from 'primereact/toast'
 import { toastService } from '../utils/toastService'
+import '../styles/Toast.css'
 
 function ToastHost() {
   const toastRef = useRef(null)
@@ -12,7 +13,15 @@ function ToastHost() {
     return unsubscribe
   }, [])
 
-  return <Toast ref={toastRef} position="top-right" />
+  return (
+    <Toast
+      ref={toastRef}
+      position="top-right"
+      appendTo={() => document.body}
+      baseZIndex={10000}
+      className="app-toast-host"
+    />
+  )
 }
 
 export default ToastHost
