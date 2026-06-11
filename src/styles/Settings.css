@@ -796,11 +796,26 @@
   border-radius: 12px;
   padding: 0.75rem 1rem;
   font-weight: 700;
+  border: none;
+  background: #3b7696;
+  color: #ffffff;
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.modal-actions button:hover:not(:disabled) {
+  background: #315f78;
 }
 
 .modal-actions .ghost {
   background: #e5edf4;
   color: #1f2a37;
+}
+
+.modal-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {
