@@ -17,7 +17,7 @@
   background-image: url('../assets/leaveloginn.webp'), linear-gradient(180deg, #7aa6b5 0%, #5c7f92 60%, #4c6a7e 100%);
   background-size: cover;
   background-position: center;
-  font-family: 'Manrope', sans-serif;
+  font-family: Manrope, sans-serif;
 }
 
 .login-card {

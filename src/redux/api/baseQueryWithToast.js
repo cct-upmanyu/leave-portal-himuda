@@ -1,6 +1,7 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { toastService } from '../../utils/toastService'
-import { getAuthToken } from '../../utils/authToken'
+import { clearAuthToken, getAuthToken } from '../../utils/authToken'
+import { clearUser, setForcedLogout } from '../slices/authSlice'
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -57,8 +58,16 @@ export const baseQueryWithToast = async (args, api, extraOptions) => {
   const shouldShowErrorToast = isMutation || isAuthEndpoint
 
   if (result.error) {
-    if (shouldShowErrorToast) {
-      const status = result.error?.status
+    const status = result.error?.status
+    const hasAuthToken = Boolean(getAuthToken())
+
+    if (status === 401 && hasAuthToken) {
+      clearAuthToken()
+      api.dispatch(setForcedLogout())
+      api.dispatch(clearUser())
+    }
+
+    if (shouldShowErrorToast || (status === 401 && hasAuthToken)) {
       toastService.show({
         severity: status === 401 || status === 403 ? 'warn' : 'error',
         summary: status === 401 || status === 403 ? 'Unauthorized' : 'Request failed',

@@ -16,8 +16,14 @@ export const internalNotificationApi = createApi({
           ? [
               ...result.data.map((item) => ({ type: 'InternalNotification', id: item.id })),
               { type: 'InternalNotification', id: 'LIST' },
-            ]
+          ]
           : [{ type: 'InternalNotification', id: 'LIST' }],
+    }),
+    getUnreadInternalNotificationCount: builder.query({
+      query: () => ({
+        url: '/api/internal-notifications/unread-count',
+      }),
+      providesTags: [{ type: 'InternalNotification', id: 'COUNT' }],
     }),
     markInternalNotificationRead: builder.mutation({
       query: (id) => ({
@@ -27,6 +33,7 @@ export const internalNotificationApi = createApi({
       invalidatesTags: (result, error, id) => [
         { type: 'InternalNotification', id },
         { type: 'InternalNotification', id: 'LIST' },
+        { type: 'InternalNotification', id: 'COUNT' },
       ],
     }),
     markAllInternalNotificationsRead: builder.mutation({
@@ -34,13 +41,17 @@ export const internalNotificationApi = createApi({
         url: '/api/internal-notifications/read-all',
         method: 'PATCH',
       }),
-      invalidatesTags: [{ type: 'InternalNotification', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'InternalNotification', id: 'LIST' },
+        { type: 'InternalNotification', id: 'COUNT' },
+      ],
     }),
   }),
 })
 
 export const {
   useGetInternalNotificationsQuery,
+  useGetUnreadInternalNotificationCountQuery,
   useMarkInternalNotificationReadMutation,
   useMarkAllInternalNotificationsReadMutation,
 } = internalNotificationApi

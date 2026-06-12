@@ -1518,10 +1518,6 @@ function Approvals({ mode = 'approvals' }) {
                 </label>
               </div>
 
-              <div className="approval-date-note">
-                Leave can only start on or after the employee joining date. End date starts from the selected start date.
-              </div>
-
               <div className="approval-toggle-row">
                 <label className={`approval-check ${!isDateRangeReady ? 'approval-check-disabled' : ''}`}>
                   <input

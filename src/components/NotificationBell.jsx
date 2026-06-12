@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import {
   useGetInternalNotificationsQuery,
+  useGetUnreadInternalNotificationCountQuery,
   useMarkAllInternalNotificationsReadMutation,
   useMarkInternalNotificationReadMutation,
 } from '../redux/api/internalNotificationApi'
@@ -28,10 +30,41 @@ const formatRelativeTime = (value) => {
   })
 }
 
+const readStoredBadgeState = (key) => {
+  if (typeof window === 'undefined') return { cachedCount: 0, snoozedCount: 0 }
+
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return { cachedCount: 0, snoozedCount: 0 }
+
+    const parsed = JSON.parse(raw)
+    return {
+      cachedCount: Number.isFinite(Number(parsed?.cachedCount)) ? Number(parsed.cachedCount) : 0,
+      snoozedCount: Number.isFinite(Number(parsed?.snoozedCount)) ? Number(parsed.snoozedCount) : 0,
+    }
+  } catch (error) {
+    return { cachedCount: 0, snoozedCount: 0 }
+  }
+}
+
+const writeStoredBadgeState = (key, value) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch (error) {
+    // ignore storage failures
+  }
+}
+
 const NotificationBell = () => {
   const navigate = useNavigate()
   const panelRef = useRef(null)
+  const user = useSelector((state) => state.auth.user)
+  const pulseTimeoutRef = useRef(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [isPulsing, setIsPulsing] = useState(false)
+  const [badgeState, setBadgeState] = useState({ cachedCount: 0, snoozedCount: 0 })
   const [readNotification] = useMarkInternalNotificationReadMutation()
   const [readAllNotifications, { isLoading: isMarkingAllRead }] =
     useMarkAllInternalNotificationsReadMutation()
@@ -39,14 +72,85 @@ const NotificationBell = () => {
     { limit: 25 },
     { refetchOnMountOrArgChange: true },
   )
-  const { data: unreadData } = useGetInternalNotificationsQuery(
-    { unreadOnly: true, limit: 50 },
+  const { data: unreadCountData } = useGetUnreadInternalNotificationCountQuery(
+    undefined,
     { refetchOnMountOrArgChange: true },
   )
 
   const notifications = notificationsData?.data || []
-  const unreadNotifications = unreadData?.data || []
-  const unreadCount = unreadNotifications.length
+  const unreadCount =
+    unreadCountData?.data?.count ?? notifications.filter((notification) => !notification.isRead).length
+  const badgeStorageKey = useMemo(() => {
+    const userId = String(user?.rowid || user?.id || '').trim() || 'anonymous'
+    return `notification-bell-state:${userId}`
+  }, [user?.id, user?.rowid])
+  const visibleUnreadCount = Math.max(
+    0,
+    badgeState.cachedCount > badgeState.snoozedCount ? badgeState.cachedCount : 0,
+  )
+  const unreadBadgeLabel = visibleUnreadCount > 99 ? '99+' : String(visibleUnreadCount)
+
+  const commitBadgeState = (nextState) => {
+    setBadgeState(nextState)
+    writeStoredBadgeState(badgeStorageKey, nextState)
+  }
+
+  useEffect(() => {
+    setBadgeState(readStoredBadgeState(badgeStorageKey))
+  }, [badgeStorageKey])
+
+  useEffect(() => {
+    setBadgeState((current) => {
+      if (!Number.isFinite(unreadCount)) {
+        return current
+      }
+
+      if (unreadCount > current.cachedCount) {
+        setIsPulsing(true)
+        window.clearTimeout(pulseTimeoutRef.current)
+        pulseTimeoutRef.current = window.setTimeout(() => {
+          setIsPulsing(false)
+        }, 1200)
+        const nextState = {
+          cachedCount: unreadCount,
+          snoozedCount: current.snoozedCount,
+        }
+        writeStoredBadgeState(badgeStorageKey, nextState)
+        return nextState
+      }
+
+      if (isOpen && unreadCount < current.cachedCount) {
+        const nextState = {
+          cachedCount: unreadCount,
+          snoozedCount: unreadCount,
+        }
+        writeStoredBadgeState(badgeStorageKey, nextState)
+        return nextState
+      }
+
+      if (isOpen && unreadCount === 0 && current.cachedCount !== 0) {
+        const nextState = {
+          cachedCount: 0,
+          snoozedCount: 0,
+        }
+        writeStoredBadgeState(badgeStorageKey, nextState)
+        return nextState
+      }
+
+      if (unreadCount <= current.cachedCount) {
+        return current
+      }
+
+      return current
+    })
+  }, [badgeStorageKey, isOpen, unreadCount])
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(pulseTimeoutRef.current)
+    },
+    [],
+  )
 
   const sortedNotifications = useMemo(
     () =>
@@ -82,6 +186,10 @@ const NotificationBell = () => {
     try {
       if (!notification?.isRead) {
         await readNotification(notification.id).unwrap()
+        commitBadgeState({
+          cachedCount: Math.max(0, unreadCount - 1),
+          snoozedCount: Math.max(0, unreadCount - 1),
+        })
       }
     } catch (error) {
       // let the existing toast handling surface any failure
@@ -96,25 +204,37 @@ const NotificationBell = () => {
   const handleMarkAll = async () => {
     try {
       await readAllNotifications().unwrap()
+      commitBadgeState({
+        cachedCount: 0,
+        snoozedCount: 0,
+      })
     } catch (error) {
       // handled globally
     }
+  }
+
+  const handleBellClick = () => {
+    commitBadgeState({
+      cachedCount: badgeState.cachedCount,
+      snoozedCount: badgeState.cachedCount,
+    })
+    setIsOpen((current) => !current)
   }
 
   return (
     <div className="notification-bell" ref={panelRef}>
       <button
         type="button"
-        className={`notification-trigger ${unreadCount > 0 ? 'has-unread' : ''}`}
+        className={`notification-trigger ${unreadCount > 0 ? 'has-unread' : ''} ${isPulsing ? 'is-pulsing' : ''}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label="Notifications"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={handleBellClick}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6.2V12a7 7 0 1 0-14 0v3.8L3.7 17.3a1 1 0 0 0 .7 1.7h15.2a1 1 0 0 0 .7-1.7L19 15.8Z" />
         </svg>
-        {unreadCount > 0 ? <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span> : null}
+        {visibleUnreadCount > 0 ? <span className="notification-badge">{unreadBadgeLabel}</span> : null}
       </button>
 
       {isOpen ? (
@@ -122,13 +242,13 @@ const NotificationBell = () => {
           <div className="notification-panel-header">
             <div>
               <h2>Notifications</h2>
-              <p>{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
+              <p>{visibleUnreadCount > 0 ? `${visibleUnreadCount} unread` : 'All caught up'}</p>
             </div>
             <button
               type="button"
               className="notification-mark-all"
               onClick={handleMarkAll}
-              disabled={unreadCount === 0 || isMarkingAllRead}
+              disabled={visibleUnreadCount === 0 || isMarkingAllRead}
             >
               {isMarkingAllRead ? 'Saving...' : 'Mark all read'}
             </button>
